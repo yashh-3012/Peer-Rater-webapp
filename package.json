@@ -1,0 +1,10 @@
+{
+  "name": "peerrater",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 3000",
+    "deploy:netlify": "npx netlify deploy --prod",
+    "deploy:vercel": "npx vercel --prod"
+  }
+}

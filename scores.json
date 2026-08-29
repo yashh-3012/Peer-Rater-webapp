@@ -1,0 +1,23 @@
+{
+  "finger_cricket": {
+    "best": 0,
+    "plays": 1
+  },
+  "odd_even": {
+    "wins": 0,
+    "losses": 0
+  },
+  "number_guessing": {
+    "wins": 0,
+    "best_attempts": null
+  },
+  "rock_paper_scissors": {
+    "wins": 0,
+    "losses": 0,
+    "ties": 0
+  },
+  "kbc": {
+    "best_prize": 0,
+    "plays": 0
+  }
+}
