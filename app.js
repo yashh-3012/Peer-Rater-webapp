@@ -179,6 +179,22 @@ function getMemberDisplayName(teamId, username) {
   return member?.fullName || member?.username || username;
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return 'No deadline';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'No deadline';
+  }
+
+  return parsed.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+}
+
 function getTeamBoard(teamId) {
   const boards = readBoards();
   if (!boards[teamId]) {
@@ -460,7 +476,12 @@ function removeTeamMember(memberId) {
   const board = getTeamBoard(currentUser.teamId);
   board.tasks = (board.tasks || []).map((task) => {
     if (task.assignedTo === memberToRemove?.username) {
-      return { ...task, assignedTo: null, claimedBy: task.claimedBy === memberToRemove.username ? null : task.claimedBy };
+      return {
+        ...task,
+        assignedTo: null,
+        claimedBy: task.claimedBy === memberToRemove.username ? null : task.claimedBy,
+        claimedAt: task.claimedBy === memberToRemove.username ? null : task.claimedAt
+      };
     }
     return task;
   });
@@ -546,6 +567,8 @@ function renderTaskList() {
     const claimLabel = isClaimed ? `Claimed by ${claimedByName}` : (canClaim ? `Claim for ${currentUser.username}` : 'Locked');
     const claimDisabled = !canClaim || isClaimed ? 'disabled' : '';
     const statusText = isClaimed ? `Completed by ${claimedByName}` : (task.assignedTo ? `Assigned to ${assignedToName}` : 'Unassigned');
+    const deadlineLabel = task.deadline ? formatDateTime(task.deadline) : 'No deadline set';
+    const claimedTimeLabel = task.claimedAt ? formatDateTime(task.claimedAt) : 'Not recorded';
 
     return `
       <article class="task-card" data-index="${taskIndex}">
@@ -557,6 +580,16 @@ function renderTaskList() {
           <span class="status-dot" aria-hidden="true"></span>
           <span class="status-text">${statusText}</span>
         </div>
+        <div class="task-meta task-detail-row">
+          <span class="meta-pill">Deadline</span>
+          <span class="status-text">${deadlineLabel}</span>
+        </div>
+        ${isClaimed ? `
+          <div class="task-meta task-detail-row">
+            <span class="meta-pill claim-pill">Claim time</span>
+            <span class="status-text">${claimedTimeLabel}</span>
+          </div>
+        ` : ''}
         <div class="task-actions">
           <button
             type="button"
@@ -766,6 +799,7 @@ function claimTask(taskIndex) {
   }
 
   task.claimedBy = currentUser.username;
+  task.claimedAt = new Date().toISOString();
   saveTeamBoard(team.id, board);
   renderApp();
 }
@@ -813,9 +847,11 @@ function openEditModal(taskIndex) {
   const modal = document.getElementById('editModal');
   const titleInput = document.getElementById('editTaskName');
   const pointsInput = document.getElementById('editTaskPoints');
+  const deadlineInput = document.getElementById('editTaskDeadline');
 
   titleInput.value = task.title;
   pointsInput.value = String(task.points);
+  deadlineInput.value = task.deadline || '';
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
   titleInput.focus();
@@ -847,17 +883,25 @@ function saveEditedTask(event) {
   const task = board.tasks[taskBeingEditedIndex];
   const titleInput = document.getElementById('editTaskName');
   const pointsInput = document.getElementById('editTaskPoints');
+  const deadlineInput = document.getElementById('editTaskDeadline');
 
   const trimmedTitle = normalizeText(titleInput.value);
   const parsedPoints = Number(pointsInput.value);
+  const parsedDeadline = deadlineInput.value ? new Date(deadlineInput.value) : null;
 
   if (!trimmedTitle || !Number.isFinite(parsedPoints) || parsedPoints <= 0) {
     titleInput.focus();
     return;
   }
 
+  if (deadlineInput.value && Number.isNaN(parsedDeadline.getTime())) {
+    deadlineInput.focus();
+    return;
+  }
+
   task.title = trimmedTitle;
   task.points = parsedPoints;
+  task.deadline = deadlineInput.value || null;
   saveTeamBoard(team.id, board);
   closeEditModal();
   renderApp();
@@ -878,12 +922,19 @@ function addTask(event) {
   const titleInput = document.getElementById('taskName');
   const pointsInput = document.getElementById('taskPoints');
   const assigneeSelect = document.getElementById('taskAssignee');
+  const deadlineInput = document.getElementById('taskDeadline');
 
   const title = normalizeText(titleInput.value);
   const points = Number(pointsInput.value);
   const assignedTo = assigneeSelect.value === 'unassigned' ? null : assigneeSelect.value;
+  const parsedDeadline = deadlineInput.value ? new Date(deadlineInput.value) : null;
 
   if (!title || !Number.isFinite(points) || points <= 0) {
+    return;
+  }
+
+  if (deadlineInput.value && Number.isNaN(parsedDeadline.getTime())) {
+    deadlineInput.focus();
     return;
   }
 
@@ -893,12 +944,15 @@ function addTask(event) {
     title,
     points,
     assignedTo,
-    claimedBy: null
+    deadline: deadlineInput.value || null,
+    claimedBy: null,
+    claimedAt: null
   });
 
   saveTeamBoard(team.id, board);
   titleInput.value = '';
   pointsInput.value = '10';
+  deadlineInput.value = '';
   renderApp();
 }
 

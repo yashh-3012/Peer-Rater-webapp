@@ -571,6 +571,28 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.task-detail-row {
+  margin-bottom: 10px;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary-strong);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.claim-pill {
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
 .status-dot {
   width: 10px;
   height: 10px;

@@ -107,6 +107,9 @@
               <label class="field-label" for="editTaskPoints">Task points</label>
               <input id="editTaskPoints" type="number" min="1" max="100" required />
 
+              <label class="field-label" for="editTaskDeadline">Deadline</label>
+              <input id="editTaskDeadline" type="datetime-local" />
+
               <div class="modal-actions">
                 <button type="button" class="secondary-button" data-close="true">Cancel</button>
                 <button type="submit" class="primary-button">Save changes</button>
@@ -188,6 +191,11 @@
               <div class="form-group">
                 <label class="field-label" for="taskAssignee">Assign to</label>
                 <select id="taskAssignee"></select>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label" for="taskDeadline">Deadline</label>
+                <input id="taskDeadline" type="datetime-local" />
               </div>
 
               <button type="submit" class="primary-button wide-button">Add task</button>
