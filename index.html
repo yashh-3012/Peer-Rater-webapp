@@ -67,13 +67,8 @@
             <button type="button" class="password-toggle" data-target="signupPassword" aria-label="Show password">Show</button>
           </div>
 
-          <div id="signupTeamNameWrapper" class="form-group compact-form">
-            <label class="field-label" for="signupTeamName">Team name</label>
-            <input id="signupTeamName" type="text" placeholder="Create your team name" />
-          </div>
-
-          <label class="field-label" for="signupProfilePicture">Profile picture</label>
-          <input id="signupProfilePicture" type="file" accept="image/*" />
+          <label class="field-label" for="signupTeamName">Team name</label>
+          <input id="signupTeamName" type="text" placeholder="Only required for team leaders" />
 
           <button type="submit" class="primary-button wide-button">Create account</button>
         </form>
@@ -92,6 +87,17 @@
           </div>
           <div class="topbar-actions">
             <div id="teamRoleBadge" class="team-role-badge"></div>
+            <div class="profile-menu-wrap">
+              <button id="profileMenuButton" class="profile-menu-button" type="button" aria-expanded="false" aria-controls="profileMenu">
+                <img id="topbarProfileImage" class="topbar-profile-image" src="" alt="Profile photo" />
+              </button>
+              <div id="profileMenu" class="profile-menu hidden" role="menu" aria-label="Profile options">
+                <button type="button" class="profile-menu-item" data-profile-action="upload">Upload photo</button>
+                <button type="button" class="profile-menu-item" data-profile-action="camera">Take photo</button>
+                <button type="button" class="profile-menu-item danger" data-profile-action="remove">Remove photo</button>
+              </div>
+              <input id="profileUploadInput" type="file" accept="image/*" capture="environment" hidden />
+            </div>
             <button id="logoutButton" class="ghost-button">Log out</button>
             <button id="printButton" class="ghost-button">Print receipt</button>
             <button id="chatToggleButton" class="ghost-button">💬 Chat</button>
@@ -147,6 +153,11 @@
                 <span class="helper-label">Current team</span>
                 <strong id="currentTeamName">Demo Team</strong>
               </div>
+              <div class="team-switch-row">
+                <label class="field-label" for="teamSwitchSelect">Switch team</label>
+                <select id="teamSwitchSelect"></select>
+              </div>
+              <div id="profileSummary" class="profile-summary"></div>
               <div id="memberList" class="member-list"></div>
             </div>
 
@@ -155,8 +166,11 @@
 
               <div class="form-group">
                 <label class="field-label" for="memberName">Invite team member by username</label>
-                <input id="memberName" type="text" placeholder="Existing member username" maxlength="30" />
-                <p class="helper-text">Only members who already created an account can be invited. They will receive a request and must accept it.</p>
+                <input id="memberName" type="text" placeholder="Member username" maxlength="30" />
+                <div class="stacked-inputs">
+                  <input id="memberFullName" type="text" placeholder="Member full name (optional)" maxlength="40" />
+                </div>
+                <p class="helper-text">No password is shared. The person must accept the request before joining the team.</p>
                 <button id="addMemberButton" class="primary-button wide-button">Send invite</button>
               </div>
 
@@ -169,8 +183,8 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Pending team join requests</label>
-                <div id="leaderRequestsList" class="request-list"></div>
+                <label class="field-label">Membership requests</label>
+                <div id="leaderRequestList" class="request-list"></div>
               </div>
             </div>
 
@@ -178,26 +192,25 @@
               <div class="divider"></div>
               <div class="info-card">
                 <strong>Your access</strong>
-                <p>You can claim your assigned tasks and view the contribution chart.</p>
+                <p>You can claim your assigned tasks, manage join requests, and view the contribution chart.</p>
               </div>
 
-              <div class="form-group">
-                <label class="field-label" for="teamSearchInput">Search team to join</label>
+              <div class="form-group request-search-box">
+                <label class="field-label" for="teamSearchInput">Search teams</label>
                 <div class="input-row">
-                  <input id="teamSearchInput" type="text" placeholder="Search team name" maxlength="40" />
-                  <button id="searchTeamButton" type="button" class="secondary-button">Search</button>
+                  <input id="teamSearchInput" type="text" placeholder="Find a team by name" maxlength="40" />
+                  <button id="searchTeamsButton" class="secondary-button" type="button">Search</button>
                 </div>
-                <div id="teamSearchResults" class="request-list search-results"></div>
               </div>
 
               <div class="form-group">
-                <label class="field-label">Your requests</label>
-                <div id="memberRequestsList" class="request-list"></div>
+                <label class="field-label">My pending requests</label>
+                <div id="memberRequestList" class="request-list"></div>
               </div>
 
               <div class="form-group">
-                <label class="field-label" for="memberProfileUpload">Profile picture</label>
-                <input id="memberProfileUpload" type="file" accept="image/*" />
+                <label class="field-label">Available teams</label>
+                <div id="teamSearchResults" class="team-search-results"></div>
               </div>
             </div>
 
