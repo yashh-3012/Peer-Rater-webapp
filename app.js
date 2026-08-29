@@ -195,6 +195,29 @@ function formatDateTime(value) {
   });
 }
 
+function isTaskClaimedAfterDeadline(task) {
+  if (!task || !task.claimedBy || !task.deadline || !task.claimedAt) {
+    return false;
+  }
+
+  const deadlineTime = new Date(task.deadline).getTime();
+  const claimTime = new Date(task.claimedAt).getTime();
+  if (Number.isNaN(deadlineTime) || Number.isNaN(claimTime)) {
+    return false;
+  }
+
+  return claimTime > deadlineTime;
+}
+
+function getTaskContributionPoints(task) {
+  if (!task || !task.claimedBy) {
+    return 0;
+  }
+
+  const points = Number(task.points) || 0;
+  return isTaskClaimedAfterDeadline(task) ? points / 2 : points;
+}
+
 function getTeamBoard(teamId) {
   const boards = readBoards();
   if (!boards[teamId]) {
@@ -560,18 +583,19 @@ function renderTaskList() {
   tasksList.innerHTML = visibleTasks.map((task, index) => {
     const taskIndex = board.tasks.indexOf(task);
     const isClaimed = Boolean(task.claimedBy);
+    const isLateClaim = isTaskClaimedAfterDeadline(task);
     const isAssignedToCurrentUser = task.assignedTo === currentUser.username;
     const canClaim = !isLeader && isAssignedToCurrentUser && !isClaimed;
     const claimedByName = task.claimedBy ? getMemberDisplayName(team.id, task.claimedBy) : '';
     const assignedToName = task.assignedTo ? getMemberDisplayName(team.id, task.assignedTo) : '';
-    const claimLabel = isClaimed ? `Claimed by ${claimedByName}` : (canClaim ? `Claim for ${currentUser.username}` : 'Locked');
+    const claimLabel = isLateClaim ? `Claimed after deadline by ${claimedByName}` : (isClaimed ? `Claimed by ${claimedByName}` : (canClaim ? `Claim for ${currentUser.username}` : 'Locked'));
     const claimDisabled = !canClaim || isClaimed ? 'disabled' : '';
-    const statusText = isClaimed ? `Completed by ${claimedByName}` : (task.assignedTo ? `Assigned to ${assignedToName}` : 'Unassigned');
+    const statusText = isLateClaim ? `Claimed after deadline by ${claimedByName}` : (isClaimed ? `Completed by ${claimedByName}` : (task.assignedTo ? `Assigned to ${assignedToName}` : 'Unassigned'));
     const deadlineLabel = task.deadline ? formatDateTime(task.deadline) : 'No deadline set';
     const claimedTimeLabel = task.claimedAt ? formatDateTime(task.claimedAt) : 'Not recorded';
 
     return `
-      <article class="task-card" data-index="${taskIndex}">
+      <article class="task-card ${isLateClaim ? 'task-late' : ''}" data-index="${taskIndex}">
         <div class="task-topline">
           <h3 class="task-title">${escapeHtml(task.title)}</h3>
           <span class="task-points">${task.points} pts</span>
@@ -584,7 +608,12 @@ function renderTaskList() {
           <span class="meta-pill">Deadline</span>
           <span class="status-text">${deadlineLabel}</span>
         </div>
-        ${isClaimed ? `
+        ${isLateClaim ? `
+          <div class="task-meta task-detail-row">
+            <span class="meta-pill late-pill">Late claim</span>
+            <span class="status-text">${claimedTimeLabel}</span>
+          </div>
+        ` : isClaimed ? `
           <div class="task-meta task-detail-row">
             <span class="meta-pill claim-pill">Claim time</span>
             <span class="status-text">${claimedTimeLabel}</span>
@@ -593,7 +622,7 @@ function renderTaskList() {
         <div class="task-actions">
           <button
             type="button"
-            class="claim-button ${isClaimed ? 'claimed' : ''}"
+            class="claim-button ${isClaimed ? 'claimed' : ''} ${isLateClaim ? 'late' : ''}"
             data-index="${taskIndex}"
             ${claimDisabled}
           >
@@ -645,7 +674,7 @@ function renderChart() {
 
   board.tasks.forEach((task) => {
     if (task.claimedBy && totals[task.claimedBy] !== undefined) {
-      totals[task.claimedBy] += Number(task.points) || 0;
+      totals[task.claimedBy] += getTaskContributionPoints(task);
     }
   });
 
@@ -719,10 +748,10 @@ function renderPrintReceipt(team, teamMembers, totals) {
     return;
   }
 
-  const totalClaimedPoints = teamMembers.reduce((sum, member) => sum + Number(totals[member.username] || 0), 0);
   const leader = teamMembers.find((member) => member.role === 'team-leader');
   const contributors = teamMembers.filter((member) => member.role !== 'team-leader');
-  const contributionRows = [leader, ...contributors].filter(Boolean).map((member) => {
+  const totalClaimedPoints = contributors.reduce((sum, member) => sum + Number(totals[member.username] || 0), 0);
+  const contributionRows = contributors.map((member) => {
     const points = Number(totals[member.username] || 0);
     const share = totalClaimedPoints ? ((points / totalClaimedPoints) * 100).toFixed(1) : '0.0';
     return `
@@ -736,14 +765,22 @@ function renderPrintReceipt(team, teamMembers, totals) {
   }).join('');
 
   receipt.innerHTML = `
-    <h1>PeerRater contribution receipt</h1>
-    <p><strong>Team:</strong> ${escapeHtml(team.name)}</p>
-    <table>
-      <thead>
-        <tr><th>Name</th><th>Role</th><th>Points</th><th>Contribution</th></tr>
-      </thead>
-      <tbody>${contributionRows}</tbody>
-    </table>
+    <div class="receipt-shell">
+      <h1>PeerRater contribution receipt</h1>
+      <p class="receipt-team"><strong>Team:</strong> ${escapeHtml(team.name)}</p>
+      ${leader ? `
+        <div class="receipt-leader">
+          <span class="team-leader-tag">Team leader</span>
+          <strong>${escapeHtml(leader.fullName || leader.username)}</strong>
+        </div>
+      ` : ''}
+      <table class="receipt-table">
+        <thead>
+          <tr><th>Name</th><th>Role</th><th>Points</th><th>Contribution</th></tr>
+        </thead>
+        <tbody>${contributionRows || '<tr><td colspan="4">No member contribution yet.</td></tr>'}</tbody>
+      </table>
+    </div>
   `;
 }
 
