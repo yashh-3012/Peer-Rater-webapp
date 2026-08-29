@@ -2,6 +2,7 @@ const ACCOUNTS_KEY = 'peer-rater-accounts';
 const TEAMS_KEY = 'peer-rater-teams';
 const BOARDS_KEY = 'peer-rater-team-boards';
 const CURRENT_USER_KEY = 'peer-rater-current-user';
+const JOIN_REQUESTS_KEY = 'peer-rater-join-requests';
 const DEFAULT_COLORS = ['#4f46e5', '#22c55e', '#f97316', '#ec4899', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444'];
 
 let chartInstance = null;
@@ -22,6 +23,25 @@ function setJson(key, value) {
 
 function makeId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildDefaultAvatar(label) {
+  const initials = String(label || 'P').trim().slice(0, 2).toUpperCase() || 'P';
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="avatarGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+          <stop offset="0%" stop-color="#4f46e5"/>
+          <stop offset="100%" stop-color="#7c3aed"/>
+        </linearGradient>
+      </defs>
+      <rect width="120" height="120" rx="28" fill="url(#avatarGradient)"/>
+      <circle cx="60" cy="42" r="22" fill="rgba(255,255,255,0.2)"/>
+      <path d="M35 90c8-16 22-24 25-24s17 8 25 24" fill="rgba(255,255,255,0.2)"/>
+      <text x="60" y="68" text-anchor="middle" font-size="30" font-weight="700" fill="white" font-family="Arial, sans-serif">${initials}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function normalizeText(value) {
@@ -128,6 +148,21 @@ function saveBoards(boards) {
   setJson(BOARDS_KEY, boards);
 }
 
+function readJoinRequests() {
+  return getJson(JOIN_REQUESTS_KEY, []);
+}
+
+function saveJoinRequests(requests) {
+  setJson(JOIN_REQUESTS_KEY, requests);
+}
+
+function getUserProfileImage(account) {
+  if (!account) {
+    return buildDefaultAvatar('P');
+  }
+  return account.profilePicture || buildDefaultAvatar(account.fullName || account.username || 'P');
+}
+
 function getCurrentUser() {
   const current = getJson(CURRENT_USER_KEY, null);
   if (!current || !current.id) {
@@ -149,7 +184,7 @@ function setCurrentUser(account) {
 
 function getCurrentTeam() {
   const user = getCurrentUser();
-  if (!user) {
+  if (!user || !user.teamId) {
     return null;
   }
 
@@ -275,6 +310,45 @@ function toggleAuthTab(tabName) {
 
   loginForm.classList.toggle('hidden', tabName !== 'login');
   signupForm.classList.toggle('hidden', tabName !== 'signup');
+  if (tabName === 'signup') {
+    toggleSignupTeamNameField();
+  }
+}
+
+function toggleSignupTeamNameField() {
+  const role = document.getElementById('signupRole')?.value || 'team-leader';
+  const wrapper = document.getElementById('signupTeamNameWrapper');
+  const input = document.getElementById('signupTeamName');
+  if (!wrapper || !input) {
+    return;
+  }
+
+  const isLeaderSignup = role === 'team-leader';
+  wrapper.classList.toggle('hidden', !isLeaderSignup);
+  input.required = isLeaderSignup;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve('');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Unable to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function findAccountByUsername(username) {
+  const trimmed = normalizeText(username);
+  if (!trimmed) {
+    return null;
+  }
+
+  return readAccounts().find((account) => slugify(account.username) === slugify(trimmed)) || null;
 }
 
 function handleLogin(event) {
@@ -296,7 +370,7 @@ function handleLogin(event) {
   renderApp();
 }
 
-function handleSignup(event) {
+async function handleSignup(event) {
   event.preventDefault();
 
   const role = document.getElementById('signupRole').value;
@@ -304,9 +378,18 @@ function handleSignup(event) {
   const username = normalizeText(document.getElementById('signupUsername').value);
   const password = normalizeText(document.getElementById('signupPassword').value);
   const teamName = normalizeText(document.getElementById('signupTeamName').value);
+  const profileInput = document.getElementById('signupProfilePicture');
+  const profilePicture = profileInput && profileInput.files && profileInput.files[0]
+    ? await readFileAsDataUrl(profileInput.files[0])
+    : '';
 
-  if (!fullName || !username || !password || !teamName) {
+  if (!fullName || !username || !password) {
     alert('Please complete all signup fields.');
+    return;
+  }
+
+  if (role === 'team-leader' && !teamName) {
+    alert('Please provide a team name when creating a team leader account.');
     return;
   }
 
@@ -329,7 +412,8 @@ function handleSignup(event) {
       password,
       role,
       fullName,
-      teamId
+      teamId,
+      profilePicture: profilePicture || buildDefaultAvatar(fullName || username)
     };
 
     const teams = readTeams();
@@ -350,27 +434,18 @@ function handleSignup(event) {
     return;
   }
 
-  const teams = readTeams();
-  const matchingTeam = teams.find((team) => slugify(team.name) === slugify(teamName) || team.id === teamName);
-  if (!matchingTeam) {
-    alert('Team not found. Please ask the team leader for the exact team name or team code.');
-    return;
-  }
-
   const newUser = {
     id: makeId('user'),
     username,
     password,
     role,
     fullName,
-    teamId: matchingTeam.id
+    teamId: null,
+    profilePicture: profilePicture || buildDefaultAvatar(fullName || username)
   };
 
   accounts.push(newUser);
-  matchingTeam.members.push(newUser.id);
   saveAccounts(accounts);
-  saveTeams(teams);
-  refreshBoardFromTeam(matchingTeam.id);
   setCurrentUser(newUser);
   renderApp();
 }
@@ -425,10 +500,7 @@ function addMemberFromLeader() {
   }
 
   const usernameInput = document.getElementById('memberName');
-  const fullNameInput = document.getElementById('memberFullName');
-
   const username = normalizeText(usernameInput.value);
-  const fullName = normalizeText(fullNameInput.value) || username;
 
   if (!username) {
     usernameInput.focus();
@@ -436,43 +508,50 @@ function addMemberFromLeader() {
   }
 
   const accounts = readAccounts();
-  if (accounts.some((account) => slugify(account.username) === slugify(username))) {
-    alert('That username already exists. Choose a different username.');
+  const targetMember = findAccountByUsername(username);
+  if (!targetMember) {
+    alert('No existing member account was found with that username. Ask the member to create an account first.');
     return;
   }
 
-  let generatedPassword = `${username}_${Math.random().toString(36).slice(2, 8)}`;
-  let passwordSuffix = 1;
-
-  while (accounts.some((account) => account.password === generatedPassword)) {
-    generatedPassword = `${username}_${passwordSuffix}_${Math.random().toString(36).slice(2, 6)}`;
-    passwordSuffix += 1;
+  if (targetMember.id === currentUser.id) {
+    alert('You are already the team leader and do not need to add yourself.');
+    return;
   }
 
-  const newMember = {
-    id: makeId('user'),
-    username,
-    password: generatedPassword,
-    role: 'team-member',
-    fullName,
-    teamId: currentUser.teamId
-  };
-
-  const teams = readTeams();
-  const currentTeam = teams.find((team) => team.id === currentUser.teamId);
-  if (currentTeam) {
-    if (!currentTeam.members.includes(newMember.id)) {
-      currentTeam.members.push(newMember.id);
-    }
+  if (targetMember.role !== 'team-member') {
+    alert('Only team members can be invited to a team.');
+    return;
   }
 
-  accounts.push(newMember);
-  saveAccounts(accounts);
-  saveTeams(teams);
-  refreshBoardFromTeam(currentUser.teamId);
+  if (targetMember.teamId && targetMember.teamId !== currentUser.teamId) {
+    alert('This member is already assigned to a different team.');
+    return;
+  }
+
+  const requests = readJoinRequests();
+  const alreadyPending = requests.some((request) => {
+    return request.type === 'invite' && request.teamId === currentUser.teamId && request.userId === targetMember.id && request.status === 'pending';
+  });
+
+  if (alreadyPending) {
+    alert('A pending invitation for this member is already active.');
+    return;
+  }
+
+  requests.push({
+    id: makeId('invite'),
+    type: 'invite',
+    teamId: currentUser.teamId,
+    userId: targetMember.id,
+    createdByUserId: currentUser.id,
+    createdAt: Date.now(),
+    status: 'pending'
+  });
+
+  saveJoinRequests(requests);
   usernameInput.value = '';
-  fullNameInput.value = '';
-  alert(`Member added successfully. Username: ${username} | Password: ${generatedPassword}. Share this password with the new member.`);
+  alert(`${targetMember.username} has been sent a team invitation. They must accept it before they can join the team.`);
   renderApp();
 }
 
@@ -529,9 +608,12 @@ function renderTeamMembers() {
     const canRemove = isLeader && member.id !== currentUser.id;
     return `
       <div class="member-item">
-        <div>
-          <strong>${escapeHtml(member.fullName || member.username)}</strong>
-          <span class="member-role">${getRoleLabel(member.role)}</span>
+        <div class="member-info">
+          <img class="member-avatar" src="${getUserProfileImage(member)}" alt="${escapeHtml(member.fullName || member.username)}" />
+          <div>
+            <strong>${escapeHtml(member.fullName || member.username)}</strong>
+            <span class="member-role">${getRoleLabel(member.role)}</span>
+          </div>
         </div>
         ${canRemove ? `<button type="button" class="remove-member-button" data-member-id="${member.id}">Remove</button>` : ''}
       </div>
@@ -541,6 +623,292 @@ function renderTeamMembers() {
   memberList.querySelectorAll('.remove-member-button').forEach((button) => {
     button.addEventListener('click', () => {
       removeTeamMember(button.dataset.memberId);
+    });
+  });
+}
+
+function getPendingJoinRequestsForCurrentLeader() {
+  const currentUser = getCurrentUser();
+  if (!currentUser || currentUser.role !== 'team-leader' || !currentUser.teamId) {
+    return [];
+  }
+
+  return readJoinRequests().filter((request) => {
+    return request.teamId === currentUser.teamId && request.type === 'join-request' && request.status === 'pending';
+  });
+}
+
+function getPendingInvitesForCurrentUser() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    return [];
+  }
+
+  return readJoinRequests().filter((request) => {
+    return request.userId === currentUser.id && request.type === 'invite' && request.status === 'pending';
+  });
+}
+
+function getOwnJoinRequestsForCurrentUser() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    return [];
+  }
+
+  return readJoinRequests().filter((request) => {
+    return request.userId === currentUser.id && request.type === 'join-request' && request.status === 'pending';
+  });
+}
+
+function updateJoinRequestStatus(requestId, status) {
+  const requests = readJoinRequests();
+  const request = requests.find((item) => item.id === requestId);
+  if (!request) {
+    return;
+  }
+
+  request.status = status;
+  request.updatedAt = Date.now();
+
+  if (status === 'accepted') {
+    const currentUser = getCurrentUser();
+    const targetUser = readAccounts().find((account) => account.id === request.userId);
+    const team = readTeams().find((item) => item.id === request.teamId);
+
+    if (targetUser && team && !team.members.includes(targetUser.id)) {
+      targetUser.teamId = team.id;
+      team.members.push(targetUser.id);
+      saveAccounts(readAccounts().map((account) => account.id === targetUser.id ? targetUser : account));
+      saveTeams(readTeams().map((item) => item.id === team.id ? team : item));
+      refreshBoardFromTeam(team.id);
+    }
+  }
+
+  saveJoinRequests(requests);
+  renderApp();
+}
+
+function renderJoinRequestLists() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    return;
+  }
+
+  const leaderRequestsBox = document.getElementById('leaderRequestsList');
+  const memberRequestsBox = document.getElementById('memberRequestsList');
+  const teamSearchResults = document.getElementById('teamSearchResults');
+
+  if (leaderRequestsBox && currentUser.role === 'team-leader' && currentUser.teamId) {
+    const requests = getPendingJoinRequestsForCurrentLeader();
+    leaderRequestsBox.innerHTML = requests.length
+      ? requests.map((request) => {
+          const profile = getUserProfileImage(readAccounts().find((account) => account.id === request.userId));
+          const user = readAccounts().find((account) => account.id === request.userId);
+          const username = user ? user.username : 'Unknown member';
+          return `
+            <div class="request-item">
+              <div class="request-member">
+                <img class="member-avatar small" src="${profile}" alt="${escapeHtml(username)}" />
+                <div>
+                  <strong>${escapeHtml(username)}</strong>
+                  <span>Wants to join your team</span>
+                </div>
+              </div>
+              <div class="request-actions">
+                <button type="button" class="small-button success" data-request-action="accept" data-request-id="${request.id}">Accept</button>
+                <button type="button" class="small-button danger" data-request-action="reject" data-request-id="${request.id}">Reject</button>
+              </div>
+            </div>
+          `;
+        }).join('')
+      : '<div class="empty-mini-state">No pending join requests.</div>';
+
+    leaderRequestsBox.querySelectorAll('[data-request-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.requestAction;
+        const requestId = button.dataset.requestId;
+        updateJoinRequestStatus(requestId, action === 'accept' ? 'accepted' : 'rejected');
+      });
+    });
+  }
+
+  if (memberRequestsBox) {
+    const invites = getPendingInvitesForCurrentUser();
+    const ownRequests = getOwnJoinRequestsForCurrentUser();
+    const requestItems = [...invites, ...ownRequests].map((request) => {
+      const team = readTeams().find((item) => item.id === request.teamId);
+      const teamName = team ? team.name : 'Unknown team';
+      const isInvite = request.type === 'invite';
+      const actionLabel = isInvite ? 'Accept invite' : 'Pending request';
+      return `
+        <div class="request-item ${isInvite ? 'invite' : 'member-request'}">
+          <div class="request-member">
+            <div>
+              <strong>${escapeHtml(teamName)}</strong>
+              <span>${isInvite ? 'Team invite' : 'Request sent'}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            ${isInvite ? `<button type="button" class="small-button success" data-request-action="accept" data-request-id="${request.id}">Accept</button>` : ''}
+            <button type="button" class="small-button danger" data-request-action="reject" data-request-id="${request.id}">Delete</button>
+          </div>
+        </div>
+      `;
+    });
+
+    memberRequestsBox.innerHTML = requestItems.length ? requestItems.join('') : '<div class="empty-mini-state">No team requests yet.</div>';
+    memberRequestsBox.querySelectorAll('[data-request-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.requestAction;
+        const requestId = button.dataset.requestId;
+        updateJoinRequestStatus(requestId, action === 'accept' ? 'accepted' : 'rejected');
+      });
+    });
+  }
+
+  if (teamSearchResults) {
+    const query = normalizeText(document.getElementById('teamSearchInput')?.value || '');
+    if (!query) {
+      teamSearchResults.innerHTML = '<div class="empty-mini-state">Search for a team to join.</div>';
+      return;
+    }
+
+    const matchingTeams = readTeams().filter((team) => {
+      if (!team || !team.name) {
+        return false;
+      }
+      return slugify(team.name).includes(slugify(query));
+    });
+
+    if (!matchingTeams.length) {
+      teamSearchResults.innerHTML = '<div class="empty-mini-state">No matching teams found.</div>';
+      return;
+    }
+
+    teamSearchResults.innerHTML = matchingTeams.map((team) => {
+      const leader = readAccounts().find((account) => account.id === team.leaderId);
+      const alreadyMember = currentUser.teamId === team.id;
+      const requestExists = readJoinRequests().some((request) => {
+        return request.teamId === team.id && request.userId === currentUser.id && request.type === 'join-request' && request.status === 'pending';
+      });
+      return `
+        <div class="search-result-item">
+          <div>
+            <strong>${escapeHtml(team.name)}</strong>
+            <span>${escapeHtml(leader ? leader.fullName || leader.username : 'Team leader')}</span>
+          </div>
+          <button type="button" class="small-button primary" data-team-id="${team.id}" ${alreadyMember || requestExists ? 'disabled' : ''}>
+            ${alreadyMember ? 'Already in team' : (requestExists ? 'Request sent' : 'Send request')}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    teamSearchResults.querySelectorAll('[data-team-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const teamId = button.dataset.teamId;
+        const team = readTeams().find((item) => item.id === teamId);
+        if (!team) {
+          return;
+        }
+
+        const requests = readJoinRequests();
+        const alreadyPending = requests.some((request) => request.teamId === teamId && request.userId === currentUser.id && request.type === 'join-request' && request.status === 'pending');
+        if (alreadyPending) {
+          alert('You already sent a request to this team.');
+          return;
+        }
+
+        requests.push({
+          id: makeId('request'),
+          type: 'join-request',
+          teamId,
+          userId: currentUser.id,
+          createdByUserId: currentUser.id,
+          createdAt: Date.now(),
+          status: 'pending'
+        });
+
+        saveJoinRequests(requests);
+        renderApp();
+      });
+    });
+  }
+}
+
+function renderMemberSearchResults() {
+  const currentUser = getCurrentUser();
+  if (!currentUser || currentUser.role !== 'team-member') {
+    return;
+  }
+
+  const searchInput = document.getElementById('teamSearchInput');
+  const searchResults = document.getElementById('teamSearchResults');
+  if (!searchInput || !searchResults) {
+    return;
+  }
+
+  const query = normalizeText(searchInput.value);
+  if (!query) {
+    searchResults.innerHTML = '<div class="empty-mini-state">Search for a team to join.</div>';
+    return;
+  }
+
+  const matchingTeams = readTeams().filter((team) => {
+    return team && team.name && slugify(team.name).includes(slugify(query));
+  });
+
+  if (!matchingTeams.length) {
+    searchResults.innerHTML = '<div class="empty-mini-state">No matching teams found.</div>';
+    return;
+  }
+
+  searchResults.innerHTML = matchingTeams.map((team) => {
+    const leader = readAccounts().find((account) => account.id === team.leaderId);
+    const alreadyMember = currentUser.teamId === team.id;
+    const requestExists = readJoinRequests().some((request) => {
+      return request.teamId === team.id && request.userId === currentUser.id && request.type === 'join-request' && request.status === 'pending';
+    });
+    return `
+      <div class="search-result-item">
+        <div>
+          <strong>${escapeHtml(team.name)}</strong>
+          <span>${escapeHtml(leader ? leader.fullName || leader.username : 'Team leader')}</span>
+        </div>
+        <button type="button" class="small-button primary" data-team-id="${team.id}" ${alreadyMember || requestExists ? 'disabled' : ''}>
+          ${alreadyMember ? 'Already in team' : (requestExists ? 'Request sent' : 'Send request')}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  searchResults.querySelectorAll('[data-team-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const teamId = button.dataset.teamId;
+      const team = readTeams().find((item) => item.id === teamId);
+      if (!team) {
+        return;
+      }
+
+      const requests = readJoinRequests();
+      const alreadyPending = requests.some((request) => request.teamId === teamId && request.userId === currentUser.id && request.type === 'join-request' && request.status === 'pending');
+      if (alreadyPending) {
+        alert('You already sent a request to this team.');
+        return;
+      }
+
+      requests.push({
+        id: makeId('request'),
+        type: 'join-request',
+        teamId,
+        userId: currentUser.id,
+        createdByUserId: currentUser.id,
+        createdAt: Date.now(),
+        status: 'pending'
+      });
+
+      saveJoinRequests(requests);
+      renderApp();
     });
   });
 }
@@ -792,30 +1160,37 @@ function renderApp() {
   }
 
   const team = getCurrentTeam();
-  if (!team) {
-    alert('Your account is not attached to a valid team. Please contact the team leader.');
-    setCurrentUser(null);
-    showAuthScreen();
-    return;
-  }
-
-  refreshBoardFromTeam(team.id);
   showAppScreen();
 
   const isLeader = currentUser.role === 'team-leader';
   document.getElementById('teamRoleBadge').textContent = getRoleLabel(currentUser.role);
-  document.getElementById('teamNameBadge').textContent = team.name;
-  document.getElementById('currentTeamName').textContent = team.name;
-  document.getElementById('teamHeadline').textContent = `${team.name}: ${isLeader ? 'Leader dashboard' : 'Member dashboard'}`;
+  document.getElementById('teamNameBadge').textContent = team ? team.name : 'No team yet';
+  document.getElementById('currentTeamName').textContent = team ? team.name : 'No team yet';
+  document.getElementById('teamHeadline').textContent = team
+    ? `${team.name}: ${isLeader ? 'Leader dashboard' : 'Member dashboard'}`
+    : `${isLeader ? 'Create your team' : 'Join a team'}: ${isLeader ? 'Leader dashboard' : 'Member dashboard'}`;
 
   document.getElementById('leaderControls').classList.toggle('hidden', !isLeader);
   document.getElementById('memberControls').classList.toggle('hidden', isLeader);
-  document.getElementById('taskForm').classList.toggle('hidden', !isLeader);
+  document.getElementById('taskForm').classList.toggle('hidden', !isLeader || !team);
+  if (team) {
+    refreshBoardFromTeam(team.id);
+  }
+
+  if (isLeader && !team) {
+    const pendingTeamName = document.getElementById('teamNameInput');
+    if (pendingTeamName) {
+      pendingTeamName.focus();
+    }
+  }
+
   renderTeamMembers();
   renderTaskAssigneeOptions();
   renderTaskList();
   renderChart();
   renderChatMessages();
+  renderJoinRequestLists();
+  renderMemberSearchResults();
 }
 
 function claimTask(taskIndex) {

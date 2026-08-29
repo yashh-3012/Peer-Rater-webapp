@@ -67,8 +67,13 @@
             <button type="button" class="password-toggle" data-target="signupPassword" aria-label="Show password">Show</button>
           </div>
 
-          <label class="field-label" for="signupTeamName">Team name</label>
-          <input id="signupTeamName" type="text" placeholder="Create a team or type existing team name" required />
+          <div id="signupTeamNameWrapper" class="form-group compact-form">
+            <label class="field-label" for="signupTeamName">Team name</label>
+            <input id="signupTeamName" type="text" placeholder="Create your team name" />
+          </div>
+
+          <label class="field-label" for="signupProfilePicture">Profile picture</label>
+          <input id="signupProfilePicture" type="file" accept="image/*" />
 
           <button type="submit" class="primary-button wide-button">Create account</button>
         </form>
@@ -149,13 +154,10 @@
               <div class="divider"></div>
 
               <div class="form-group">
-                <label class="field-label" for="memberName">Add new team member</label>
-                <input id="memberName" type="text" placeholder="New member username" maxlength="30" />
-                <div class="stacked-inputs">
-                  <input id="memberFullName" type="text" placeholder="Member full name" maxlength="40" />
-                </div>
-                <p class="helper-text">A secure password is generated automatically and shared with the new member.</p>
-                <button id="addMemberButton" class="primary-button wide-button">Add member</button>
+                <label class="field-label" for="memberName">Invite team member by username</label>
+                <input id="memberName" type="text" placeholder="Existing member username" maxlength="30" />
+                <p class="helper-text">Only members who already created an account can be invited. They will receive a request and must accept it.</p>
+                <button id="addMemberButton" class="primary-button wide-button">Send invite</button>
               </div>
 
               <div class="form-group">
@@ -165,6 +167,11 @@
                   <button id="createTeamButton" class="secondary-button">Create</button>
                 </div>
               </div>
+
+              <div class="form-group">
+                <label class="field-label">Pending team join requests</label>
+                <div id="leaderRequestsList" class="request-list"></div>
+              </div>
             </div>
 
             <div id="memberControls" class="member-controls hidden">
@@ -172,6 +179,25 @@
               <div class="info-card">
                 <strong>Your access</strong>
                 <p>You can claim your assigned tasks and view the contribution chart.</p>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label" for="teamSearchInput">Search team to join</label>
+                <div class="input-row">
+                  <input id="teamSearchInput" type="text" placeholder="Search team name" maxlength="40" />
+                  <button id="searchTeamButton" type="button" class="secondary-button">Search</button>
+                </div>
+                <div id="teamSearchResults" class="request-list search-results"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Your requests</label>
+                <div id="memberRequestsList" class="request-list"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label" for="memberProfileUpload">Profile picture</label>
+                <input id="memberProfileUpload" type="file" accept="image/*" />
               </div>
             </div>
 
