@@ -3,6 +3,7 @@ const TEAMS_KEY = 'peer-rater-teams';
 const BOARDS_KEY = 'peer-rater-team-boards';
 const CURRENT_USER_KEY = 'peer-rater-current-user';
 const REQUESTS_KEY = 'peer-rater-join-requests';
+const THEME_KEY = 'peer-rater-theme';
 const DEFAULT_COLORS = ['#4f46e5', '#22c55e', '#f97316', '#ec4899', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444'];
 
 let chartInstance = null;
@@ -1564,6 +1565,7 @@ function bindEvents() {
     if (event.key === 'Escape') {
       closeEditModal();
       toggleProfileMenu(false);
+      toggleThemeMenu(false);
     }
   });
 }
@@ -1689,11 +1691,95 @@ function bindChatEvents() {
 }
 
 
+// Theme functionality
+function setTheme(themeName) {
+  const validThemes = ['light', 'dark', 'ocean', 'forest', 'sunset'];
+  if (!validThemes.includes(themeName)) {
+    themeName = 'light';
+  }
+
+  if (themeName === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', themeName);
+  }
+
+  localStorage.setItem(THEME_KEY, themeName);
+  updateThemeMenuActiveState(themeName);
+}
+
+function getSavedTheme() {
+  return localStorage.getItem(THEME_KEY) || 'light';
+}
+
+function updateThemeMenuActiveState(activeTheme) {
+  document.querySelectorAll('.theme-menu-item').forEach((item) => {
+    const itemTheme = item.dataset.theme;
+    if (itemTheme === activeTheme) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+}
+
+function toggleThemeMenu(show) {
+  const menu = document.getElementById('themeMenu');
+  const button = document.getElementById('themeMenuButton');
+  if (!menu || !button) {
+    return;
+  }
+
+  const isHidden = menu.classList.contains('hidden');
+  const shouldShow = show === undefined ? isHidden : show;
+
+  if (shouldShow) {
+    menu.classList.remove('hidden');
+    button.setAttribute('aria-expanded', 'true');
+  } else {
+    menu.classList.add('hidden');
+    button.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function initializeTheme() {
+  const savedTheme = getSavedTheme();
+  setTheme(savedTheme);
+}
+
+function bindThemeEvents() {
+  const themeMenuButton = document.getElementById('themeMenuButton');
+  if (themeMenuButton) {
+    themeMenuButton.addEventListener('click', () => toggleThemeMenu());
+  }
+
+  document.querySelectorAll('.theme-menu-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const theme = item.dataset.theme;
+      setTheme(theme);
+      toggleThemeMenu(false);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    const themeMenu = document.getElementById('themeMenu');
+    const themeButton = document.getElementById('themeMenuButton');
+    if (!themeMenu || !themeButton) {
+      return;
+    }
+    if (!themeButton.contains(event.target) && !themeMenu.contains(event.target)) {
+      toggleThemeMenu(false);
+    }
+  });
+}
+
 function initializeApp() {
   ensureSeedData();
   syncTeamMemberships();
   bindEvents();
   bindChatEvents();
+  bindThemeEvents();
+  initializeTheme();
   syncSignupRoleFields();
   const currentUser = getCurrentUser();
   if (currentUser) {

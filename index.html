@@ -87,6 +87,18 @@
           </div>
           <div class="topbar-actions">
             <div id="teamRoleBadge" class="team-role-badge"></div>
+            <div class="theme-switcher-wrap">
+              <button id="themeMenuButton" class="theme-menu-button" type="button" aria-expanded="false" aria-controls="themeMenu" title="Switch theme">
+                🎨
+              </button>
+              <div id="themeMenu" class="theme-menu hidden" role="menu" aria-label="Theme options">
+                <button type="button" class="theme-menu-item" data-theme="light">☀️ Light</button>
+                <button type="button" class="theme-menu-item" data-theme="dark">🌙 Dark</button>
+                <button type="button" class="theme-menu-item" data-theme="ocean">🌊 Ocean</button>
+                <button type="button" class="theme-menu-item" data-theme="forest">🌲 Forest</button>
+                <button type="button" class="theme-menu-item" data-theme="sunset">🌅 Sunset</button>
+              </div>
+            </div>
             <div class="profile-menu-wrap">
               <button id="profileMenuButton" class="profile-menu-button" type="button" aria-expanded="false" aria-controls="profileMenu">
                 <img id="topbarProfileImage" class="topbar-profile-image" src="" alt="Profile photo" />
