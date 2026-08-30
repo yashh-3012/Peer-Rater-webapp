@@ -24,6 +24,18 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+.auth-screen::before {
+  opacity: 0.08;
+}
+
+.auth-screen::after {
+  opacity: 0.08;
+}
+
+.auth-screen .bg-particle {
+  opacity: 0.1;
+}
+
 /* Dark Theme */
 [data-theme="dark"] {
   --bg: #0f172a;
@@ -49,6 +61,18 @@
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .auth-screen::before {
+  opacity: 0.15;
+}
+
+[data-theme="dark"] .auth-screen::after {
+  opacity: 0.15;
+}
+
+[data-theme="dark"] .auth-screen .bg-particle {
+  opacity: 0.2;
 }
 
 /* Ocean Theme */
@@ -78,6 +102,18 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="ocean"] .auth-screen::before {
+  opacity: 0.12;
+}
+
+[data-theme="ocean"] .auth-screen::after {
+  opacity: 0.12;
+}
+
+[data-theme="ocean"] .auth-screen .bg-particle {
+  opacity: 0.15;
+}
+
 /* Forest Theme */
 [data-theme="forest"] {
   --bg: #14532d;
@@ -103,6 +139,18 @@
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="forest"] .auth-screen::before {
+  opacity: 0.12;
+}
+
+[data-theme="forest"] .auth-screen::after {
+  opacity: 0.12;
+}
+
+[data-theme="forest"] .auth-screen .bg-particle {
+  opacity: 0.15;
 }
 
 /* Sunset Theme */
@@ -132,6 +180,18 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="sunset"] .auth-screen::before {
+  opacity: 0.12;
+}
+
+[data-theme="sunset"] .auth-screen::after {
+  opacity: 0.12;
+}
+
+[data-theme="sunset"] .auth-screen .bg-particle {
+  opacity: 0.15;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -158,6 +218,65 @@ select {
 
 button {
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+button:active {
+  transform: scale(0.92);
+  transition: transform 0.1s ease;
+}
+
+button.clicked {
+  animation: buttonClick 0.3s ease;
+}
+
+@keyframes buttonClick {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(0.92);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.primary-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.primary-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.primary-button:active::before {
+  width: 200px;
+  height: 200px;
+}
+
+@keyframes rippleEffect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
 }
 
 button,
@@ -179,6 +298,113 @@ select,
   display: grid;
   place-items: center;
   padding: 24px;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-screen::before {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: var(--primary);
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.08;
+  top: -100px;
+  right: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.auth-screen::after {
+  content: '';
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  background: var(--secondary);
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.08;
+  bottom: -80px;
+  left: -80px;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+.auth-screen .bg-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.auth-screen .bg-particle:nth-child(1) {
+  width: 100px;
+  height: 100px;
+  background: var(--primary);
+  top: 20%;
+  left: 10%;
+  animation: particleFloat 12s ease-in-out infinite;
+}
+
+.auth-screen .bg-particle:nth-child(2) {
+  width: 80px;
+  height: 80px;
+  background: var(--secondary);
+  top: 60%;
+  right: 15%;
+  animation: particleFloat 15s ease-in-out infinite reverse;
+}
+
+.auth-screen .bg-particle:nth-child(3) {
+  width: 60px;
+  height: 60px;
+  background: var(--accent);
+  bottom: 20%;
+  left: 30%;
+  animation: particleFloat 18s ease-in-out infinite;
+}
+
+.auth-screen .bg-particle:nth-child(4) {
+  width: 120px;
+  height: 120px;
+  background: var(--primary);
+  top: 40%;
+  right: 30%;
+  animation: particleFloat 20s ease-in-out infinite reverse;
+}
+
+.auth-screen .bg-particle:nth-child(5) {
+  width: 50px;
+  height: 50px;
+  background: var(--secondary);
+  top: 80%;
+  left: 60%;
+  animation: particleFloat 14s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(20px, 20px);
+  }
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -20px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 30px) scale(0.9);
+  }
+  75% {
+    transform: translate(-30px, -10px) scale(1.05);
+  }
 }
 
 .auth-card {
@@ -188,6 +414,18 @@ select,
   border-radius: 16px;
   box-shadow: var(--shadow-xl);
   padding: 32px;
+  animation: authCardFadeIn 0.6s ease;
+}
+
+@keyframes authCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .auth-header {
@@ -195,6 +433,18 @@ select,
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
+  animation: slideDown 0.5s ease 0.1s both;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-header h2 {
@@ -212,6 +462,18 @@ select,
   border-radius: 12px;
   padding: 4px;
   margin-bottom: 24px;
+  animation: slideUp 0.5s ease 0.2s both;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-tab {
@@ -221,6 +483,11 @@ select,
   background: transparent;
   font-weight: 700;
   color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.auth-tab:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .auth-tab.active {
@@ -232,6 +499,40 @@ select,
 .auth-form {
   display: grid;
   gap: 16px;
+  animation: fadeIn 0.5s ease 0.3s both;
+}
+
+.auth-form > * {
+  animation: slideInRight 0.4s ease both;
+}
+
+.auth-form > *:nth-child(1) { animation-delay: 0.35s; }
+.auth-form > *:nth-child(2) { animation-delay: 0.4s; }
+.auth-form > *:nth-child(3) { animation-delay: 0.45s; }
+.auth-form > *:nth-child(4) { animation-delay: 0.5s; }
+.auth-form > *:nth-child(5) { animation-delay: 0.55s; }
+.auth-form > *:nth-child(6) { animation-delay: 0.6s; }
+.auth-form > *:nth-child(7) { animation-delay: 0.65s; }
+.auth-form > *:nth-child(8) { animation-delay: 0.7s; }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .password-field {
@@ -423,16 +724,52 @@ select,
 }
 
 .brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: white;
-  background: var(--primary);
-  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 50%, #3b82f6 100%);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-brand-mark {
+  width: 64px;
+  height: 64px;
+  font-size: 2rem;
+  border-radius: 18px;
+  box-shadow: var(--shadow-xl);
+}
+
+.brand-mark::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
 }
 
 .eyebrow {

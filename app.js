@@ -821,7 +821,7 @@ function renderJoinRequestLists() {
           <p class="request-meta">${isInvite ? 'Team invite' : 'Join request pending'}</p>
         </div>
         <div class="request-actions">
-          <button type="button" class="primary-button small-button" data-accept-request="${request.id}">Accept</button>
+          ${isInvite ? `<button type="button" class="primary-button small-button" data-accept-request="${request.id}">Accept</button>` : ''}
           <button type="button" class="secondary-button small-button" data-reject-request="${request.id}">Dismiss</button>
         </div>
       </div>
@@ -832,10 +832,8 @@ function renderJoinRequestLists() {
     button.addEventListener('click', () => {
       const requestId = button.dataset.acceptRequest;
       const request = readRequests().find((item) => item.id === requestId);
+      // Only allow accepting invites for team members
       if (request && request.type === 'invite' && currentUser.role === 'team-member') {
-        acceptRequest(requestId);
-      }
-      if (request && request.type === 'join-request' && currentUser.role === 'team-leader') {
         acceptRequest(requestId);
       }
     });
@@ -1773,12 +1771,54 @@ function bindThemeEvents() {
   });
 }
 
+function bindButtonAnimations() {
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (button) {
+      // Create ripple effect
+      const ripple = document.createElement('span');
+      const rect = button.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = event.clientX - rect.left - size / 2;
+      const y = event.clientY - rect.top - size / 2;
+
+      ripple.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        left: ${x}px;
+        top: ${y}px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 50%;
+        transform: scale(0);
+        animation: rippleEffect 0.6s ease-out;
+        pointer-events: none;
+      `;
+
+      button.style.position = 'relative';
+      button.style.overflow = 'hidden';
+      button.appendChild(ripple);
+
+      setTimeout(() => {
+        ripple.remove();
+      }, 600);
+
+      // Add click animation class
+      button.classList.add('clicked');
+      setTimeout(() => {
+        button.classList.remove('clicked');
+      }, 300);
+    }
+  });
+}
+
 function initializeApp() {
   ensureSeedData();
   syncTeamMemberships();
   bindEvents();
   bindChatEvents();
   bindThemeEvents();
+  bindButtonAnimations();
   initializeTheme();
   syncSignupRoleFields();
   const currentUser = getCurrentUser();
