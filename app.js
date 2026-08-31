@@ -8,6 +8,8 @@ const DEFAULT_COLORS = ['#4f46e5', '#22c55e', '#f97316', '#ec4899', '#f59e0b', '
 
 let chartInstance = null;
 let taskBeingEditedIndex = null;
+let activeChartType = 'pie';
+let currentTaskFilter = 'all';
 
 function getJson(key, fallback) {
   try {
@@ -32,6 +34,57 @@ function normalizeText(value) {
 
 function slugify(value) {
   return normalizeText(value).toLowerCase();
+}
+
+function isTeamNameTaken(teamName, excludeTeamId = null) {
+  const slug = slugify(teamName);
+  if (!slug) {
+    return false;
+  }
+  return readTeams().some((team) => slugify(team.name) === slug && team.id !== excludeTeamId);
+}
+
+function isUsernameTaken(username, excludeUserId = null) {
+  const slug = slugify(username);
+  if (!slug) {
+    return false;
+  }
+  return readAccounts().some((account) => slugify(account.username) === slug && account.id !== excludeUserId);
+}
+
+function setInputStatus(fieldId, status, message = '') {
+  const icon = document.getElementById(fieldId + 'Status');
+  const msg = document.getElementById(fieldId + 'Msg');
+  const input = document.getElementById(fieldId);
+
+  if (icon) {
+    icon.classList.remove('status-valid', 'status-invalid');
+    if (status === 'valid') {
+      icon.classList.add('status-valid');
+    } else if (status === 'invalid') {
+      icon.classList.add('status-invalid');
+    }
+  }
+
+  if (msg) {
+    msg.classList.remove('status-valid', 'status-invalid');
+    if (status === 'valid') {
+      msg.classList.add('status-valid');
+    } else if (status === 'invalid') {
+      msg.classList.add('status-invalid');
+    }
+    msg.textContent = message;
+  }
+
+  if (input) {
+    if (status === 'invalid') {
+      input.style.borderColor = 'var(--danger, #ef4444)';
+    } else if (status === 'valid') {
+      input.style.borderColor = 'var(--success, #22c55e)';
+    } else {
+      input.style.borderColor = '';
+    }
+  }
 }
 
 function readRequests() {
@@ -105,6 +158,107 @@ function getProfilePhoto(account) {
     return generateAvatarDataUrl('peer', 'Peer');
   }
   return account.profileImage || generateAvatarDataUrl(account.username, account.fullName || account.username);
+}
+
+function generateTeamLogoDataUrl(teamName) {
+  const cleanName = String(teamName || 'Team').trim();
+  const initials = cleanName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'T';
+  const seed = cleanName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const palette = [
+    ['#4F46E5', '#06B6D4'],
+    ['#22C55E', '#10B981'],
+    ['#F97316', '#F59E0B'],
+    ['#EC4899', '#8B5CF6'],
+    ['#3B82F6', '#6366F1']
+  ];
+  const pair = palette[seed % palette.length];
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="teamGrad_${seed}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${pair[0]}"/>
+          <stop offset="100%" stop-color="${pair[1]}"/>
+        </linearGradient>
+      </defs>
+      <rect width="120" height="120" rx="32" fill="url(#teamGrad_${seed})"/>
+      <circle cx="60" cy="60" r="42" fill="rgba(255,255,255,0.18)"/>
+      <text x="60" y="72" text-anchor="middle" font-size="38" font-family="Inter, Arial, sans-serif" font-weight="800" fill="white" letter-spacing="1">${initials}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function getTeamLogo(team) {
+  if (!team) {
+    return generateTeamLogoDataUrl('Peer Team');
+  }
+  return team.logoImage || generateTeamLogoDataUrl(team.name);
+}
+
+async function saveTeamLogoFromFile(file) {
+  const currentUser = getCurrentUser();
+  const team = getCurrentTeam();
+  if (!currentUser || !team || currentUser.role !== 'team-leader' || team.leaderId !== currentUser.id) {
+    alert('Only the team leader can change the team logo.');
+    return;
+  }
+  if (!file) {
+    return;
+  }
+
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    if (!dataUrl) {
+      return;
+    }
+
+    const teams = readTeams();
+    const targetTeam = teams.find((t) => t.id === team.id);
+    if (targetTeam) {
+      targetTeam.logoImage = dataUrl;
+      saveTeams(teams);
+      renderApp();
+    }
+  } catch (error) {
+    alert('Failed to upload team logo image. Please try another image.');
+  }
+}
+
+function removeTeamLogo() {
+  const currentUser = getCurrentUser();
+  const team = getCurrentTeam();
+  if (!currentUser || !team || currentUser.role !== 'team-leader' || team.leaderId !== currentUser.id) {
+    alert('Only the team leader can remove the team logo.');
+    return;
+  }
+
+  if (confirm('Are you sure you want to reset the team logo to the default emblem?')) {
+    const teams = readTeams();
+    const targetTeam = teams.find((t) => t.id === team.id);
+    if (targetTeam) {
+      delete targetTeam.logoImage;
+      saveTeams(teams);
+      renderApp();
+    }
+  }
+}
+
+function setTaskFilter(filter) {
+  const allowed = ['all', 'available', 'claimed', 'mine'];
+  currentTaskFilter = allowed.includes(filter) ? filter : 'all';
+  document.querySelectorAll('.filter-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.taskFilter === currentTaskFilter);
+  });
+  renderTaskList();
+}
+
+function setChartType(type) {
+  const allowed = ['pie', 'doughnut', 'bar', 'line'];
+  activeChartType = allowed.includes(type) ? type : 'pie';
+  document.querySelectorAll('.chart-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.chartType === activeChartType);
+  });
+  renderChart();
 }
 
 function ensureSeedData() {
@@ -415,27 +569,42 @@ async function handleSignup(event) {
   const teamName = normalizeText(document.getElementById('signupTeamName').value);
 
   if (!fullName || !username || !password) {
-    alert('Please complete the required signup fields.');
+    alert('Please complete all required signup fields.');
     return;
   }
 
-  if (role === 'team-leader' && !teamName) {
-    alert('Team leaders must create a team name when signing up.');
+  if (username.length < 3) {
+    alert('Username must be at least 3 characters.');
     return;
   }
 
-  const accounts = readAccounts();
-  if (accounts.some((account) => slugify(account.username) === slugify(username))) {
+  if (password.length < 6) {
+    alert('Password must be at least 6 characters.');
+    return;
+  }
+
+  if (isUsernameTaken(username)) {
     alert('That username is already taken. Please choose another one.');
     return;
   }
 
-  if (accounts.some((account) => account.password === password)) {
-    alert('That password is already in use. Please choose a different one.');
-    return;
+  if (role === 'team-leader') {
+    if (!teamName) {
+      alert('Team leaders must create a team name when signing up.');
+      return;
+    }
+    if (teamName.length < 2) {
+      alert('Team name is too short. Please use at least 2 characters.');
+      return;
+    }
+    if (isTeamNameTaken(teamName)) {
+      alert('That team name is already taken. Please choose a different team name.');
+      return;
+    }
   }
 
   const profileImage = generateAvatarDataUrl(username, fullName);
+  const accounts = readAccounts();
 
   if (role === 'team-leader') {
     const teamId = makeId('team');
@@ -457,7 +626,8 @@ async function handleSignup(event) {
       name: teamName,
       leaderId: newUser.id,
       members: [newUser.id],
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      logoImage: null
     });
 
     accounts.push(newUser);
@@ -505,9 +675,13 @@ function createNewTeam() {
     return;
   }
 
-  const teams = readTeams();
-  if (teams.some((team) => slugify(team.name) === slugify(teamName))) {
-    alert('A team with that name already exists. Please use a different name.');
+  if (teamName.length < 2) {
+    alert('Team name must be at least 2 characters.');
+    return;
+  }
+
+  if (isTeamNameTaken(teamName)) {
+    alert('A team with that name already exists. Please choose a different name.');
     return;
   }
 
@@ -517,7 +691,8 @@ function createNewTeam() {
     name: teamName,
     leaderId: currentUser.id,
     members: [currentUser.id],
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    logoImage: null
   };
 
   const nextUser = normalizeUserTeamState({
@@ -529,10 +704,12 @@ function createNewTeam() {
 
   const accounts = readAccounts().map((account) => account.id === currentUser.id ? nextUser : account);
   saveAccounts(accounts);
+  const teams = readTeams();
   teams.push(nextTeam);
   saveTeams(teams);
   saveTeamBoard(nextTeamId, { members: [currentUser.username], tasks: [], activeMember: currentUser.username });
   teamNameInput.value = '';
+  setInputStatus('teamNameInput', 'idle', '');
   setCurrentUser(nextUser);
   renderApp();
 }
@@ -1013,28 +1190,52 @@ function renderTaskList() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
   const tasksList = document.getElementById('taskList');
+  const taskCountBadge = document.getElementById('taskCountBadge');
 
-  if (!currentUser || !team) {
-    tasksList.innerHTML = '<div class="empty-state">Please log in to continue.</div>';
+  if (!tasksList || !currentUser || !team) {
+    if (tasksList) {
+      tasksList.innerHTML = '<div class="empty-state">Please log in to continue.</div>';
+    }
+    if (taskCountBadge) {
+      taskCountBadge.textContent = '0 tasks';
+    }
     return;
   }
 
   const board = getTeamBoard(team.id);
   const isLeader = currentUser.role === 'team-leader';
-  const visibleTasks = isLeader ? board.tasks : board.tasks.filter((task) => task.assignedTo === currentUser.username || task.claimedBy === currentUser.username);
+  const allTasks = board.tasks || [];
+
+  let visibleTasks = allTasks;
+  if (currentTaskFilter === 'available') {
+    visibleTasks = allTasks.filter((task) => !task.claimedBy);
+  } else if (currentTaskFilter === 'claimed') {
+    visibleTasks = allTasks.filter((task) => Boolean(task.claimedBy));
+  } else if (currentTaskFilter === 'mine') {
+    visibleTasks = allTasks.filter((task) => task.assignedTo === currentUser.username || task.claimedBy === currentUser.username);
+  }
+
+  if (taskCountBadge) {
+    taskCountBadge.textContent = `${visibleTasks.length} ${visibleTasks.length === 1 ? 'task' : 'tasks'}`;
+  }
 
   if (!visibleTasks.length) {
-    tasksList.innerHTML = '<div class="empty-state">No tasks are available right now.</div>';
+    tasksList.innerHTML = `
+      <div class="empty-state">
+        <p>No tasks found in <strong>${currentTaskFilter}</strong> category.</p>
+        ${isLeader ? '<p class="helper-text">Add a new task using the form above.</p>' : ''}
+      </div>
+    `;
     return;
   }
 
-  tasksList.innerHTML = visibleTasks.map((task, index) => {
+  tasksList.innerHTML = visibleTasks.map((task) => {
     const taskIndex = board.tasks.indexOf(task);
     const isClaimed = Boolean(task.claimedBy);
     const isAssignedToCurrentUser = task.assignedTo === currentUser.username;
     const canClaim = !isLeader && isAssignedToCurrentUser && !isClaimed;
     const claimedByName = task.claimedBy ? getMemberDisplayName(team.id, task.claimedBy) : '';
-    const assignedToName = task.assignedTo ? getMemberDisplayName(team.id, task.assignedTo) : '';
+    const assignedToName = task.assignedTo ? getMemberDisplayName(team.id, task.assignedTo) : 'Unassigned';
     const lateClaim = isTaskLate(task);
     const effectivePoints = getTaskEffectivePoints(task);
     const claimLabel = isClaimed
@@ -1046,7 +1247,7 @@ function renderTaskList() {
       : (task.assignedTo ? `Assigned to ${assignedToName}` : 'Unassigned');
 
     return `
-      <article class="task-card ${lateClaim ? 'late-task' : ''}" data-index="${taskIndex}">
+      <article class="task-card ${lateClaim ? 'late-task' : ''} ${isClaimed ? 'claimed' : ''}" data-index="${taskIndex}">
         <div class="task-topline">
           <h3 class="task-title">${escapeHtml(task.title)}</h3>
           <span class="task-points">${effectivePoints} pts</span>
@@ -1057,7 +1258,7 @@ function renderTaskList() {
         </div>
         <div class="task-meta task-meta-secondary">
           <span class="deadline-pill">${task.deadline ? `Deadline: ${formatDateTime(task.deadline)}` : 'No deadline'}</span>
-          ${task.claimedAt ? `<span class="claim-time-pill">Claimed at: ${formatDateTime(task.claimedAt)}</span>` : ''}
+          ${task.claimedAt ? `<span class="claim-time-pill">Claimed: ${formatDateTime(task.claimedAt)}</span>` : ''}
           ${lateClaim ? '<span class="late-tag">Claimed after deadline</span>' : ''}
         </div>
         <div class="task-actions">
@@ -1124,8 +1325,8 @@ function renderChart() {
     totals[task.claimedBy] += contributionPoints;
   });
 
-  const labels = visibleMembers.map((member) => member.username);
-  const series = labels.map((member) => totals[member] || 0);
+  const labels = visibleMembers.map((member) => member.fullName || member.username);
+  const series = visibleMembers.map((member) => totals[member.username] || 0);
   const canvas = document.getElementById('contributionChart');
 
   if (chartInstance) {
@@ -1133,34 +1334,59 @@ function renderChart() {
   }
 
   if (canvas) {
-    chartInstance = new Chart(canvas, {
-      type: 'pie',
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#f1f5f9' : '#334155';
+    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+
+    const chartConfig = {
+      type: activeChartType,
       data: {
         labels,
         datasets: [{
+          label: 'Points Earned',
           data: series,
           backgroundColor: labels.map((_, idx) => DEFAULT_COLORS[idx % DEFAULT_COLORS.length]),
-          borderWidth: 2,
-          borderColor: '#ffffff'
+          borderColor: activeChartType === 'line' ? DEFAULT_COLORS[0] : '#ffffff',
+          borderWidth: activeChartType === 'line' ? 3 : 2,
+          fill: activeChartType === 'line',
+          tension: 0.35,
+          pointBackgroundColor: labels.map((_, idx) => DEFAULT_COLORS[idx % DEFAULT_COLORS.length]),
+          pointRadius: 6,
+          pointHoverRadius: 8
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label(context) {
                 const { label, parsed, dataset } = context;
-                const total = dataset.data.reduce((sum, value) => sum + Number(value), 0);
-                const share = total ? ((parsed / total) * 100).toFixed(1) : '0.0';
-                return `${label}: ${parsed} pts (${share}%)`;
+                const value = (activeChartType === 'bar' || activeChartType === 'line') ? parsed.y : parsed;
+                const total = dataset.data.reduce((sum, val) => sum + Number(val || 0), 0);
+                const share = total ? ((value / total) * 100).toFixed(1) : '0.0';
+                return `${label}: ${value} pts (${share}%)`;
               }
             }
           }
-        }
+        },
+        scales: (activeChartType === 'bar' || activeChartType === 'line') ? {
+          x: {
+            ticks: { color: textColor, font: { family: 'Inter, sans-serif', size: 11 } },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: textColor, font: { family: 'Inter, sans-serif', size: 11 }, precision: 0 },
+            grid: { color: gridColor }
+          }
+        } : {}
       }
-    });
+    };
+
+    chartInstance = new Chart(canvas, chartConfig);
   }
 
   renderLegend(labels, series);
@@ -1183,7 +1409,7 @@ function renderLegend(labels, series) {
           <span class="legend-swatch" style="background:${color};"></span>
           <span>${member}</span>
         </span>
-        <strong>${share}%</strong>
+        <strong>${value} pts (${share}%)</strong>
       </div>
     `;
   }).join('');
@@ -1214,8 +1440,8 @@ function renderPrintReceipt(team, teamMembers, totals) {
 
   receipt.innerHTML = `
     <div class="receipt-shell">
-      <h1>PeerRater contribution receipt</h1>
-      <p class="receipt-team"><strong>Team:</strong> ${escapeHtml(team.name)}</p>
+      <h1>PeerRater Contribution Receipt</h1>
+      <p class="receipt-team"><strong>Team:</strong> ${escapeHtml(team.name)} • <strong>View Mode:</strong> ${activeChartType.toUpperCase()} Graph</p>
       ${leader ? `
         <div class="receipt-leader">
           <span class="team-leader-tag">Team leader</span>
@@ -1230,6 +1456,54 @@ function renderPrintReceipt(team, teamMembers, totals) {
       </table>
     </div>
   `;
+}
+
+function renderHeroStats(team, currentUser) {
+  const logoEl = document.getElementById('heroTeamLogo');
+  const cardLogoEl = document.getElementById('teamCardLogo');
+  const uploadBtn = document.getElementById('heroTeamLogoUploadBtn');
+  const leaderActions = document.getElementById('teamLeaderActions');
+  const removeBtn = document.getElementById('removeTeamLogoBtn');
+  const leaderPill = document.getElementById('teamLeaderPill');
+
+  const totalPointsEl = document.getElementById('statHeroTotalPoints');
+  const totalTasksEl = document.getElementById('statHeroTotalTasks');
+  const claimedTasksEl = document.getElementById('statHeroClaimedTasks');
+  const membersEl = document.getElementById('statHeroMembers');
+
+  if (!team || !currentUser) {
+    const defaultLogo = generateTeamLogoDataUrl('Peer Team');
+    if (logoEl) logoEl.src = defaultLogo;
+    if (cardLogoEl) cardLogoEl.src = defaultLogo;
+    if (uploadBtn) uploadBtn.classList.add('hidden');
+    if (leaderActions) leaderActions.classList.add('hidden');
+    return;
+  }
+
+  const logoSrc = getTeamLogo(team);
+  if (logoEl) logoEl.src = logoSrc;
+  if (cardLogoEl) cardLogoEl.src = logoSrc;
+
+  const isLeader = currentUser.role === 'team-leader' && team.leaderId === currentUser.id;
+  if (uploadBtn) uploadBtn.classList.toggle('hidden', !isLeader);
+  if (leaderActions) leaderActions.classList.toggle('hidden', !isLeader);
+  if (removeBtn) removeBtn.classList.toggle('hidden', !isLeader || !team.logoImage);
+
+  const leaderAccount = readAccounts().find((a) => a.id === team.leaderId);
+  if (leaderPill) {
+    leaderPill.textContent = leaderAccount ? `Leader: ${leaderAccount.fullName || leaderAccount.username}` : 'Team Leader';
+  }
+
+  const board = getTeamBoard(team.id);
+  const tasks = board.tasks || [];
+  const claimedTasks = tasks.filter((t) => Boolean(t.claimedBy));
+  const totalPoints = claimedTasks.reduce((sum, t) => sum + getTaskEffectivePoints(t), 0);
+  const membersCount = (team.members || []).length;
+
+  if (totalPointsEl) totalPointsEl.textContent = String(totalPoints);
+  if (totalTasksEl) totalTasksEl.textContent = String(tasks.length);
+  if (claimedTasksEl) claimedTasksEl.textContent = String(claimedTasks.length);
+  if (membersEl) membersEl.textContent = String(membersCount);
 }
 
 function renderTeamSwitcher() {
@@ -1297,6 +1571,7 @@ function renderApp() {
     refreshBoardFromTeam(team.id);
   }
 
+  renderHeroStats(team, currentUser);
   renderProfileSummary();
   renderTeamMembers();
   renderTaskAssigneeOptions();
@@ -1479,7 +1754,118 @@ function addTask(event) {
   titleInput.value = '';
   pointsInput.value = '10';
   deadlineInput.value = '';
+  setInputStatus('taskName', 'idle', '');
   renderApp();
+}
+
+function bindLiveValidationEvents() {
+  const signupUsername = document.getElementById('signupUsername');
+  if (signupUsername) {
+    signupUsername.addEventListener('input', () => {
+      const val = normalizeText(signupUsername.value);
+      if (!val) {
+        setInputStatus('signupUsername', 'idle', '');
+        return;
+      }
+      if (val.length < 3) {
+        setInputStatus('signupUsername', 'invalid', 'Username must be at least 3 characters');
+        return;
+      }
+      if (isUsernameTaken(val)) {
+        setInputStatus('signupUsername', 'invalid', 'Username is already taken');
+        return;
+      }
+      setInputStatus('signupUsername', 'valid', 'Username is available');
+    });
+  }
+
+  const signupPassword = document.getElementById('signupPassword');
+  if (signupPassword) {
+    signupPassword.addEventListener('input', () => {
+      const val = signupPassword.value;
+      if (!val) {
+        setInputStatus('signupPassword', 'idle', '');
+        return;
+      }
+      if (val.length < 6) {
+        setInputStatus('signupPassword', 'invalid', 'Password must be at least 6 characters');
+        return;
+      }
+      setInputStatus('signupPassword', 'valid', 'Password meets requirements');
+    });
+  }
+
+  const signupFullName = document.getElementById('signupFullName');
+  if (signupFullName) {
+    signupFullName.addEventListener('input', () => {
+      const val = normalizeText(signupFullName.value);
+      if (!val) {
+        setInputStatus('signupFullName', 'idle', '');
+        return;
+      }
+      if (val.length < 2) {
+        setInputStatus('signupFullName', 'invalid', 'Name is too short');
+        return;
+      }
+      setInputStatus('signupFullName', 'valid', 'Looks great');
+    });
+  }
+
+  const signupTeamName = document.getElementById('signupTeamName');
+  if (signupTeamName) {
+    signupTeamName.addEventListener('input', () => {
+      const val = normalizeText(signupTeamName.value);
+      if (!val) {
+        setInputStatus('signupTeamName', 'idle', '');
+        return;
+      }
+      if (val.length < 2) {
+        setInputStatus('signupTeamName', 'invalid', 'Team name is too short');
+        return;
+      }
+      if (isTeamNameTaken(val)) {
+        setInputStatus('signupTeamName', 'invalid', 'Team name is already taken');
+        return;
+      }
+      setInputStatus('signupTeamName', 'valid', 'Team name is available');
+    });
+  }
+
+  const teamNameInput = document.getElementById('teamNameInput');
+  if (teamNameInput) {
+    teamNameInput.addEventListener('input', () => {
+      const val = normalizeText(teamNameInput.value);
+      if (!val) {
+        setInputStatus('teamNameInput', 'idle', '');
+        return;
+      }
+      if (val.length < 2) {
+        setInputStatus('teamNameInput', 'invalid', 'Team name is too short');
+        return;
+      }
+      if (isTeamNameTaken(val)) {
+        setInputStatus('teamNameInput', 'invalid', 'Team name is already taken');
+        return;
+      }
+      setInputStatus('teamNameInput', 'valid', 'Team name is available');
+    });
+  }
+
+  const taskName = document.getElementById('taskName');
+  if (taskName) {
+    taskName.addEventListener('input', () => {
+      const val = normalizeText(taskName.value);
+      if (!val) {
+        setInputStatus('taskName', 'idle', '');
+        return;
+      }
+      if (val.length < 3) {
+        setInputStatus('taskName', 'invalid', 'Task name must be at least 3 characters');
+        return;
+      }
+      setInputStatus('taskName', 'valid', 'Valid task name');
+    });
+  }
 }
 
 function bindEvents() {
@@ -1488,6 +1874,12 @@ function bindEvents() {
   document.getElementById('signupRole').addEventListener('change', syncSignupRoleFields);
   document.getElementById('logoutButton').addEventListener('click', handleLogout);
   document.getElementById('printButton').addEventListener('click', () => window.print());
+
+  const printReceiptBtn = document.getElementById('printReceiptBtn');
+  if (printReceiptBtn) {
+    printReceiptBtn.addEventListener('click', () => window.print());
+  }
+
   document.getElementById('addMemberButton').addEventListener('click', addMemberFromLeader);
   document.getElementById('createTeamButton').addEventListener('click', createNewTeam);
   document.getElementById('searchTeamsButton').addEventListener('click', searchTeams);
@@ -1499,6 +1891,7 @@ function bindEvents() {
   });
   document.getElementById('taskForm').addEventListener('submit', addTask);
   document.getElementById('editTaskForm').addEventListener('submit', saveEditedTask);
+
   const teamSwitchSelect = document.getElementById('teamSwitchSelect');
   if (teamSwitchSelect) {
     teamSwitchSelect.addEventListener('change', (event) => {
@@ -1513,6 +1906,47 @@ function bindEvents() {
       renderApp();
     });
   }
+
+  // Team Logo Customization Triggers
+  const teamLogoUploadInput = document.getElementById('teamLogoUploadInput');
+  const heroTeamLogoUploadBtn = document.getElementById('heroTeamLogoUploadBtn');
+  const changeTeamLogoBtn = document.getElementById('changeTeamLogoBtn');
+  const removeTeamLogoBtn = document.getElementById('removeTeamLogoBtn');
+
+  if (heroTeamLogoUploadBtn && teamLogoUploadInput) {
+    heroTeamLogoUploadBtn.addEventListener('click', () => teamLogoUploadInput.click());
+  }
+  if (changeTeamLogoBtn && teamLogoUploadInput) {
+    changeTeamLogoBtn.addEventListener('click', () => teamLogoUploadInput.click());
+  }
+  if (teamLogoUploadInput) {
+    teamLogoUploadInput.addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      await saveTeamLogoFromFile(file);
+      teamLogoUploadInput.value = '';
+    });
+  }
+  if (removeTeamLogoBtn) {
+    removeTeamLogoBtn.addEventListener('click', removeTeamLogo);
+  }
+
+  // Chart Type Tabs
+  document.querySelectorAll('.chart-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setChartType(btn.dataset.chartType);
+    });
+  });
+
+  // Task Filter Tabs
+  document.querySelectorAll('.filter-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      setTaskFilter(tab.dataset.taskFilter);
+    });
+  });
+
+  // Live input validation
+  bindLiveValidationEvents();
   document.getElementById('memberName').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();

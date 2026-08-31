@@ -1761,3 +1761,458 @@ select:focus {
   min-width: 80px;
   border-radius: 8px;
 }
+
+/* ==========================================================================
+   Input Validation & Live Availability Checkmarks
+   ========================================================================== */
+.field-wrap {
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.input-validated-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-validated-wrap input {
+  width: 100%;
+  padding-right: 40px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-validated-wrap .password-field {
+  width: 100%;
+  position: relative;
+}
+
+.input-validated-wrap .password-field input {
+  padding-right: 88px !important;
+}
+
+.input-validated-wrap .password-field .password-toggle {
+  right: 36px;
+}
+
+.input-status-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%) scale(0.6);
+  transition: opacity 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 5;
+}
+
+.input-status-icon.status-valid {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  background: #22c55e;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+}
+
+.input-status-icon.status-valid::before {
+  content: '✓';
+}
+
+.input-status-icon.status-invalid {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+}
+
+.input-status-icon.status-invalid::before {
+  content: '✕';
+}
+
+.input-status-msg {
+  margin: 3px 0 0 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-height: 16px;
+  display: block;
+  transition: color 0.2s ease;
+}
+
+.input-status-msg.status-valid {
+  color: #16a34a;
+}
+
+[data-theme="dark"] .input-status-msg.status-valid,
+[data-theme="ocean"] .input-status-msg.status-valid,
+[data-theme="forest"] .input-status-msg.status-valid,
+[data-theme="sunset"] .input-status-msg.status-valid {
+  color: #4ade80;
+}
+
+.input-status-msg.status-invalid {
+  color: #dc2626;
+}
+
+[data-theme="dark"] .input-status-msg.status-invalid,
+[data-theme="ocean"] .input-status-msg.status-invalid,
+[data-theme="forest"] .input-status-msg.status-invalid,
+[data-theme="sunset"] .input-status-msg.status-invalid {
+  color: #f87171;
+}
+
+/* ==========================================================================
+   Hero Banner & Team Logo Redesign
+   ========================================================================== */
+.hero-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  animation: cardEntrance 0.4s ease-out both;
+}
+
+.hero-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.hero-team-logo-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.team-logo-avatar-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  position: relative;
+  background: var(--primary-soft);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.team-logo-avatar-wrap:hover {
+  transform: scale(1.04);
+}
+
+.hero-team-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.team-logo-upload-btn {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: 2px solid var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease, background 0.2s ease;
+  z-index: 6;
+}
+
+.team-logo-upload-btn:hover {
+  transform: scale(1.15);
+  background: var(--primary-hover);
+}
+
+.hero-text-block {
+  flex: 1;
+  min-width: 260px;
+}
+
+.hero-kicker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.team-leader-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .team-leader-pill,
+[data-theme="ocean"] .team-leader-pill,
+[data-theme="forest"] .team-leader-pill,
+[data-theme="sunset"] .team-leader-pill {
+  color: #fcd34d;
+}
+
+.hero-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hero-team-badge {
+  background: var(--primary) !important;
+  color: white !important;
+  font-weight: 700;
+}
+
+.hero-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.stat-card {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   Team Hub & Team Logo Actions
+   ========================================================================== */
+.team-identity-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-card-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
+  flex-shrink: 0;
+}
+
+.team-leader-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.small-ghost-button {
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.small-ghost-button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.small-ghost-button.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ==========================================================================
+   Task Filter Tabs & Board Enhancements
+   ========================================================================== */
+.board-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-alt);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.filter-tab {
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover {
+  color: var(--text);
+}
+
+.filter-tab.active {
+  background: var(--panel);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+}
+
+.task-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ==========================================================================
+   Chart Type Switcher & Analytics
+   ========================================================================== */
+.chart-type-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-alt);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.chart-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chart-tab-btn:hover {
+  color: var(--text);
+}
+
+.chart-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+}
+
+.receipt-actions-box {
+  margin-top: 14px;
+}
+
+/* ==========================================================================
+   Animations & Dashboard Aesthetics
+   ========================================================================== */
+.panel {
+  animation: cardEntrance 0.4s ease-out both;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.controls-panel { animation-delay: 0.05s; }
+.board-panel { animation-delay: 0.1s; }
+.summary-panel { animation-delay: 0.15s; }
+
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.member-item {
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.member-item:hover {
+  transform: translateX(2px);
+}

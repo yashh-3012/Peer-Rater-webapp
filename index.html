@@ -63,20 +63,44 @@
             <option value="team-member">Team member</option>
           </select>
 
-          <label class="field-label" for="signupFullName">Full name</label>
-          <input id="signupFullName" type="text" placeholder="Your full name" required />
-
-          <label class="field-label" for="signupUsername">Username</label>
-          <input id="signupUsername" type="text" placeholder="Choose a unique username" required />
-
-          <label class="field-label" for="signupPassword">Password</label>
-          <div class="password-field">
-            <input id="signupPassword" type="password" placeholder="Choose a unique password" required />
-            <button type="button" class="password-toggle" data-target="signupPassword" aria-label="Show password">Show</button>
+          <div class="field-wrap">
+            <label class="field-label" for="signupFullName">Full name</label>
+            <div class="input-validated-wrap">
+              <input id="signupFullName" type="text" placeholder="Your full name" required />
+              <span id="signupFullNameStatus" class="input-status-icon" aria-live="polite"></span>
+            </div>
+            <p id="signupFullNameMsg" class="input-status-msg"></p>
           </div>
 
-          <label class="field-label" for="signupTeamName">Team name</label>
-          <input id="signupTeamName" type="text" placeholder="Only required for team leaders" />
+          <div class="field-wrap">
+            <label class="field-label" for="signupUsername">Username</label>
+            <div class="input-validated-wrap">
+              <input id="signupUsername" type="text" placeholder="Choose a unique username" required />
+              <span id="signupUsernameStatus" class="input-status-icon" aria-live="polite"></span>
+            </div>
+            <p id="signupUsernameMsg" class="input-status-msg"></p>
+          </div>
+
+          <div class="field-wrap">
+            <label class="field-label" for="signupPassword">Password</label>
+            <div class="input-validated-wrap">
+              <div class="password-field">
+                <input id="signupPassword" type="password" placeholder="Choose password (min 6 chars)" required />
+                <button type="button" class="password-toggle" data-target="signupPassword" aria-label="Show password">Show</button>
+              </div>
+              <span id="signupPasswordStatus" class="input-status-icon" aria-live="polite"></span>
+            </div>
+            <p id="signupPasswordMsg" class="input-status-msg"></p>
+          </div>
+
+          <div id="signupTeamNameGroup" class="field-wrap">
+            <label class="field-label" for="signupTeamName" id="signupTeamNameLabel">Team name</label>
+            <div class="input-validated-wrap">
+              <input id="signupTeamName" type="text" placeholder="Choose a unique team name" />
+              <span id="signupTeamNameStatus" class="input-status-icon" aria-live="polite"></span>
+            </div>
+            <p id="signupTeamNameMsg" class="input-status-msg"></p>
+          </div>
 
           <button type="submit" class="primary-button wide-button">Create account</button>
         </form>
@@ -152,29 +176,71 @@
         </div>
 
         <section class="hero-banner">
-          <div>
-            <p class="hero-kicker">Claim work. Prove effort.</p>
-            <h2 id="teamHeadline">Turn group projects into transparent, fair contribution data.</h2>
+          <div class="hero-content">
+            <div class="hero-team-logo-container">
+              <div class="team-logo-avatar-wrap">
+                <img id="heroTeamLogo" class="hero-team-logo" src="" alt="Team logo" />
+                <button id="heroTeamLogoUploadBtn" class="team-logo-upload-btn hidden" type="button" title="Upload custom team logo (Leader only)" aria-label="Upload team logo">
+                  📷
+                </button>
+              </div>
+              <input id="teamLogoUploadInput" type="file" accept="image/*" hidden />
+            </div>
+            <div class="hero-text-block">
+              <div class="hero-kicker-row">
+                <p class="hero-kicker">Claim work • Prove effort</p>
+                <span id="teamLeaderPill" class="team-leader-pill"></span>
+              </div>
+              <h2 id="teamHeadline">Turn group projects into transparent, fair contribution data.</h2>
+              <div class="hero-badges">
+                <span id="teamNameBadge" class="hero-team-badge">Team</span>
+                <span>Live task board</span>
+                <span>Fairness metric</span>
+                <span>Printable receipt</span>
+              </div>
+            </div>
           </div>
-          <div class="hero-badges">
-            <span id="teamNameBadge">Team</span>
-            <span>Live task board</span>
-            <span>Point-based fairness</span>
-            <span>Printable receipt</span>
+          <div class="hero-stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Total Points</span>
+              <strong id="statHeroTotalPoints" class="stat-value">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Tasks</span>
+              <strong id="statHeroTotalTasks" class="stat-value">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Claimed Tasks</span>
+              <strong id="statHeroClaimedTasks" class="stat-value">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Team Members</span>
+              <strong id="statHeroMembers" class="stat-value">0</strong>
+            </div>
           </div>
         </section>
 
         <main class="layout">
           <section class="panel controls-panel">
             <div class="section-header">
-              <h2>Build your board</h2>
+              <h2>Team Hub</h2>
             </div>
 
             <div id="teamManagerSection" class="team-manager-box">
               <div class="team-meta-row">
-                <span class="helper-label">Current team</span>
-                <strong id="currentTeamName">Demo Team</strong>
+                <div class="team-identity-inline">
+                  <img id="teamCardLogo" class="team-card-logo" src="" alt="Team logo" />
+                  <div>
+                    <span class="helper-label">Active team</span>
+                    <strong id="currentTeamName">Demo Team</strong>
+                  </div>
+                </div>
+                <div id="teamLeaderActions" class="team-leader-actions hidden">
+                  <button id="changeTeamLogoBtn" class="small-ghost-button" type="button">Logo</button>
+                  <button id="removeTeamLogoBtn" class="small-ghost-button danger hidden" type="button">Reset</button>
+                </div>
               </div>
+
               <div class="team-switch-row">
                 <label class="field-label" for="teamSwitchSelect">Switch team</label>
                 <select id="teamSwitchSelect"></select>
@@ -198,10 +264,12 @@
 
               <div class="form-group">
                 <label class="field-label" for="teamNameInput">Create a new team</label>
-                <div class="input-row">
+                <div class="input-validated-wrap">
                   <input id="teamNameInput" type="text" placeholder="New team name" maxlength="40" />
-                  <button id="createTeamButton" class="secondary-button">Create</button>
+                  <span id="teamNameInputStatus" class="input-status-icon" aria-live="polite"></span>
                 </div>
+                <p id="teamNameInputMsg" class="input-status-msg"></p>
+                <button id="createTeamButton" class="secondary-button wide-button" style="margin-top: 8px;">Create team</button>
               </div>
 
               <div class="form-group">
@@ -235,23 +303,42 @@
                 <div id="teamSearchResults" class="team-search-results"></div>
               </div>
             </div>
+          </section>
 
-            <div class="divider"></div>
+          <section class="panel board-panel">
+            <div class="section-header split-header">
+              <div class="board-header-left">
+                <h2>Project Tasks</h2>
+                <div class="task-filter-tabs" role="tablist" aria-label="Filter tasks">
+                  <button type="button" class="filter-tab active" data-task-filter="all">All</button>
+                  <button type="button" class="filter-tab" data-task-filter="available">Available</button>
+                  <button type="button" class="filter-tab" data-task-filter="claimed">Claimed</button>
+                  <button type="button" class="filter-tab" data-task-filter="mine">My Tasks</button>
+                </div>
+              </div>
+              <div id="taskCountBadge" class="pill">0 tasks</div>
+            </div>
 
             <form id="taskForm" class="task-form hidden">
               <div class="form-group">
                 <label class="field-label" for="taskName">Task name</label>
-                <input id="taskName" type="text" placeholder="Write a page" maxlength="60" required />
+                <div class="input-validated-wrap">
+                  <input id="taskName" type="text" placeholder="e.g., Implement login authentication" maxlength="60" required />
+                  <span id="taskNameStatus" class="input-status-icon" aria-live="polite"></span>
+                </div>
+                <p id="taskNameMsg" class="input-status-msg"></p>
               </div>
 
-              <div class="form-group">
-                <label class="field-label" for="taskPoints">Point value</label>
-                <input id="taskPoints" type="number" min="1" max="100" value="10" required />
-              </div>
+              <div class="task-form-row">
+                <div class="form-group">
+                  <label class="field-label" for="taskPoints">Point value</label>
+                  <input id="taskPoints" type="number" min="1" max="100" value="10" required />
+                </div>
 
-              <div class="form-group">
-                <label class="field-label" for="taskAssignee">Assign to</label>
-                <select id="taskAssignee"></select>
+                <div class="form-group">
+                  <label class="field-label" for="taskAssignee">Assign to</label>
+                  <select id="taskAssignee"></select>
+                </div>
               </div>
 
               <div class="form-group">
@@ -259,22 +346,21 @@
                 <input id="taskDeadline" type="datetime-local" />
               </div>
 
-              <button type="submit" class="primary-button wide-button">Add task</button>
+              <button type="submit" class="primary-button wide-button">Add task to board</button>
             </form>
-          </section>
-
-          <section class="panel board-panel">
-            <div class="section-header split-header">
-              <h2>Project task board</h2>
-              <div class="pill">Live work tracker</div>
-            </div>
 
             <div id="taskList" class="task-list" aria-live="polite"></div>
           </section>
 
           <aside class="panel summary-panel">
-            <div class="section-header">
-              <h2>Contribution pie</h2>
+            <div class="section-header split-header">
+              <h2>Analytics</h2>
+              <div class="chart-type-tabs" role="tablist" aria-label="Chart view options">
+                <button type="button" class="chart-tab-btn active" data-chart-type="pie" title="Pie chart">🥧 Pie</button>
+                <button type="button" class="chart-tab-btn" data-chart-type="doughnut" title="Doughnut chart">🍩 Doughnut</button>
+                <button type="button" class="chart-tab-btn" data-chart-type="bar" title="Bar graph">📊 Bar</button>
+                <button type="button" class="chart-tab-btn" data-chart-type="line" title="Line graph">📈 Line</button>
+              </div>
             </div>
 
             <div id="printReceiptMeta" class="print-receipt-meta" aria-label="Contribution receipt"></div>
@@ -288,6 +374,10 @@
             <div class="totals-box">
               <p>Total project points</p>
               <strong id="totalPoints">0</strong>
+            </div>
+
+            <div class="receipt-actions-box">
+              <button id="printReceiptBtn" class="primary-button wide-button" type="button">🖨️ Print Receipt & Chart</button>
             </div>
           </aside>
         </main>
