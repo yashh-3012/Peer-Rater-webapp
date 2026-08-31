@@ -243,6 +243,154 @@ function removeTeamLogo() {
   }
 }
 
+function openTeamLogoModal() {
+  const team = getCurrentTeam();
+  const currentUser = getCurrentUser();
+  const modal = document.getElementById('teamLogoModal');
+  const img = document.getElementById('teamLogoModalImg');
+  const title = document.getElementById('teamLogoModalTeamName');
+  const leaderControls = document.getElementById('teamLogoModalLeaderControls');
+
+  if (!modal || !team) {
+    return;
+  }
+
+  if (img) {
+    img.src = getTeamLogo(team);
+  }
+  if (title) {
+    title.textContent = team.name;
+  }
+
+  const isLeader = currentUser && currentUser.role === 'team-leader' && team.leaderId === currentUser.id;
+  if (leaderControls) {
+    leaderControls.classList.toggle('hidden', !isLeader);
+  }
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeTeamLogoModal() {
+  const modal = document.getElementById('teamLogoModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function generateUsernameSuggestions(baseName) {
+  const raw = slugify(baseName || 'peer').replace(/[^a-z0-9_]/g, '');
+  const clean = raw.slice(0, 12) || 'peer';
+  const accounts = readAccounts();
+  const takenSlugs = new Set(accounts.map((a) => slugify(a.username)));
+
+  const candidates = [
+    `${clean}_dev`,
+    `${clean}_pro`,
+    `peer_${clean}`,
+    `${clean}${Math.floor(10 + Math.random() * 89)}`,
+    `${clean}_elite`,
+    `the_${clean}`
+  ];
+
+  const available = [];
+  for (const cand of candidates) {
+    if (!takenSlugs.has(slugify(cand)) && !available.includes(cand)) {
+      available.push(cand);
+    }
+    if (available.length >= 3) break;
+  }
+
+  return available;
+}
+
+function renderUsernameSuggestions(baseName) {
+  const container = document.getElementById('usernameSuggestions');
+  const list = document.getElementById('usernameSuggestionsList');
+  if (!container || !list) return;
+
+  const suggestions = generateUsernameSuggestions(baseName);
+  if (!suggestions.length) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  list.innerHTML = suggestions.map((sug) => `
+    <button type="button" class="suggestion-chip" data-suggest="${escapeHtml(sug)}">💡 ${escapeHtml(sug)}</button>
+  `).join('');
+
+  list.querySelectorAll('.suggestion-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('signupUsername');
+      if (input) {
+        input.value = chip.dataset.suggest;
+        input.dispatchEvent(new Event('input'));
+      }
+      container.classList.add('hidden');
+    });
+  });
+
+  container.classList.remove('hidden');
+}
+
+function generateTeamNameSuggestions(baseTeamName) {
+  const raw = normalizeText(baseTeamName || 'Innovators');
+  const clean = raw.replace(/[^a-zA-Z0-9 ]/g, '').trim().slice(0, 16) || 'Innovators';
+  const teams = readTeams();
+  const takenSlugs = new Set(teams.map((t) => slugify(t.name)));
+
+  const candidates = [
+    `${clean} Squad`,
+    `${clean} Titans`,
+    `Alpha ${clean}`,
+    `${clean} Nexus`,
+    `Team ${clean}`,
+    `Apex ${clean}`
+  ];
+
+  const available = [];
+  for (const cand of candidates) {
+    if (!takenSlugs.has(slugify(cand)) && !available.includes(cand)) {
+      available.push(cand);
+    }
+    if (available.length >= 3) break;
+  }
+
+  return available;
+}
+
+function renderTeamNameSuggestions(baseTeamName) {
+  const container = document.getElementById('teamNameSuggestions');
+  const list = document.getElementById('teamNameSuggestionsList');
+  if (!container || !list) return;
+
+  const suggestions = generateTeamNameSuggestions(baseTeamName);
+  if (!suggestions.length) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  list.innerHTML = suggestions.map((sug) => `
+    <button type="button" class="suggestion-chip" data-suggest="${escapeHtml(sug)}">🚀 ${escapeHtml(sug)}</button>
+  `).join('');
+
+  list.querySelectorAll('.suggestion-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('signupTeamName');
+      if (input) {
+        input.value = chip.dataset.suggest;
+        input.dispatchEvent(new Event('input'));
+      }
+      container.classList.add('hidden');
+    });
+  });
+
+  container.classList.remove('hidden');
+}
+
 function setTaskFilter(filter) {
   const allowed = ['all', 'available', 'claimed', 'mine'];
   currentTaskFilter = allowed.includes(filter) ? filter : 'all';
@@ -1143,25 +1291,55 @@ function renderTeamMembers() {
     return;
   }
 
-  const members = getTeamMembers(team.id);
-  const isLeader = currentUser.role === 'team-leader';
+  const allAccounts = readAccounts();
+  const leaderAccount = allAccounts.find((acc) => acc.id === team.leaderId);
+  const allTeamMembers = getTeamMembers(team.id);
+  const otherMembers = allTeamMembers.filter((member) => member.id !== team.leaderId);
+  const isCurrentUserLeader = currentUser.role === 'team-leader' && team.leaderId === currentUser.id;
 
-  memberList.innerHTML = members.map((member) => {
-    const canRemove = isLeader && member.id !== currentUser.id;
-    const photo = getProfilePhoto(member);
-    return `
-      <div class="member-item">
+  let html = '';
+
+  // 1. Render Team Leader (ONLY ONCE as Team Leader)
+  if (leaderAccount) {
+    const leaderPhoto = getProfilePhoto(leaderAccount);
+    html += `
+      <div class="team-leader-card">
         <div class="member-info-wrap">
-          <img class="member-avatar" src="${photo}" alt="${escapeHtml(member.fullName || member.username)}" />
+          <img class="member-avatar" src="${leaderPhoto}" alt="${escapeHtml(leaderAccount.fullName || leaderAccount.username)}" />
           <div>
-            <strong>${escapeHtml(member.fullName || member.username)}</strong>
-            <span class="member-role">${getRoleLabel(member.role)}</span>
+            <strong>${escapeHtml(leaderAccount.fullName || leaderAccount.username)}</strong>
+            <span class="member-role">👑 Team Leader</span>
           </div>
         </div>
-        ${canRemove ? `<button type="button" class="remove-member-button" data-member-id="${member.id}">Remove</button>` : ''}
       </div>
     `;
-  }).join('');
+  }
+
+  // 2. Render Team Members
+  html += `<div class="members-subhead">Team Members (${otherMembers.length})</div>`;
+
+  if (otherMembers.length === 0) {
+    html += '<p class="helper-text" style="font-size:0.8rem; padding: 4px 0 8px;">No other members joined yet.</p>';
+  } else {
+    html += otherMembers.map((member) => {
+      const canRemove = isCurrentUserLeader;
+      const photo = getProfilePhoto(member);
+      return `
+        <div class="member-item">
+          <div class="member-info-wrap">
+            <img class="member-avatar" src="${photo}" alt="${escapeHtml(member.fullName || member.username)}" />
+            <div>
+              <strong>${escapeHtml(member.fullName || member.username)}</strong>
+              <span class="member-role">${getRoleLabel(member.role)}</span>
+            </div>
+          </div>
+          ${canRemove ? `<button type="button" class="remove-member-button" data-member-id="${member.id}">Remove</button>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  memberList.innerHTML = html;
 
   memberList.querySelectorAll('.remove-member-button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -1441,7 +1619,7 @@ function renderPrintReceipt(team, teamMembers, totals) {
   receipt.innerHTML = `
     <div class="receipt-shell">
       <h1>PeerRater Contribution Receipt</h1>
-      <p class="receipt-team"><strong>Team:</strong> ${escapeHtml(team.name)} • <strong>View Mode:</strong> ${activeChartType.toUpperCase()} Graph</p>
+      <p class="receipt-team"><strong>Team:</strong> ${escapeHtml(team.name)}</p>
       ${leader ? `
         <div class="receipt-leader">
           <span class="team-leader-tag">Team leader</span>
@@ -1461,9 +1639,6 @@ function renderPrintReceipt(team, teamMembers, totals) {
 function renderHeroStats(team, currentUser) {
   const logoEl = document.getElementById('heroTeamLogo');
   const cardLogoEl = document.getElementById('teamCardLogo');
-  const uploadBtn = document.getElementById('heroTeamLogoUploadBtn');
-  const leaderActions = document.getElementById('teamLeaderActions');
-  const removeBtn = document.getElementById('removeTeamLogoBtn');
   const leaderPill = document.getElementById('teamLeaderPill');
 
   const totalPointsEl = document.getElementById('statHeroTotalPoints');
@@ -1475,19 +1650,12 @@ function renderHeroStats(team, currentUser) {
     const defaultLogo = generateTeamLogoDataUrl('Peer Team');
     if (logoEl) logoEl.src = defaultLogo;
     if (cardLogoEl) cardLogoEl.src = defaultLogo;
-    if (uploadBtn) uploadBtn.classList.add('hidden');
-    if (leaderActions) leaderActions.classList.add('hidden');
     return;
   }
 
   const logoSrc = getTeamLogo(team);
   if (logoEl) logoEl.src = logoSrc;
   if (cardLogoEl) cardLogoEl.src = logoSrc;
-
-  const isLeader = currentUser.role === 'team-leader' && team.leaderId === currentUser.id;
-  if (uploadBtn) uploadBtn.classList.toggle('hidden', !isLeader);
-  if (leaderActions) leaderActions.classList.toggle('hidden', !isLeader);
-  if (removeBtn) removeBtn.classList.toggle('hidden', !isLeader || !team.logoImage);
 
   const leaderAccount = readAccounts().find((a) => a.id === team.leaderId);
   if (leaderPill) {
@@ -1759,23 +1927,53 @@ function addTask(event) {
 }
 
 function bindLiveValidationEvents() {
+  const signupFullName = document.getElementById('signupFullName');
+  if (signupFullName) {
+    signupFullName.addEventListener('input', () => {
+      const val = normalizeText(signupFullName.value);
+      if (!val) {
+        setInputStatus('signupFullName', 'idle', '');
+        return;
+      }
+      if (val.length < 2) {
+        setInputStatus('signupFullName', 'invalid', 'Name is too short');
+        return;
+      }
+      setInputStatus('signupFullName', 'valid', 'Looks great');
+      const signupUsername = document.getElementById('signupUsername');
+      if (signupUsername && !signupUsername.value) {
+        renderUsernameSuggestions(val);
+      }
+    });
+  }
+
   const signupUsername = document.getElementById('signupUsername');
   if (signupUsername) {
+    signupUsername.addEventListener('focus', () => {
+      const base = signupUsername.value || signupFullName?.value || 'peer';
+      renderUsernameSuggestions(base);
+    });
+
     signupUsername.addEventListener('input', () => {
       const val = normalizeText(signupUsername.value);
       if (!val) {
         setInputStatus('signupUsername', 'idle', '');
+        renderUsernameSuggestions(signupFullName?.value || 'peer');
         return;
       }
       if (val.length < 3) {
         setInputStatus('signupUsername', 'invalid', 'Username must be at least 3 characters');
+        renderUsernameSuggestions(val);
         return;
       }
       if (isUsernameTaken(val)) {
         setInputStatus('signupUsername', 'invalid', 'Username is already taken');
+        renderUsernameSuggestions(val);
         return;
       }
       setInputStatus('signupUsername', 'valid', 'Username is available');
+      const container = document.getElementById('usernameSuggestions');
+      if (container) container.classList.add('hidden');
     });
   }
 
@@ -1795,39 +1993,32 @@ function bindLiveValidationEvents() {
     });
   }
 
-  const signupFullName = document.getElementById('signupFullName');
-  if (signupFullName) {
-    signupFullName.addEventListener('input', () => {
-      const val = normalizeText(signupFullName.value);
-      if (!val) {
-        setInputStatus('signupFullName', 'idle', '');
-        return;
-      }
-      if (val.length < 2) {
-        setInputStatus('signupFullName', 'invalid', 'Name is too short');
-        return;
-      }
-      setInputStatus('signupFullName', 'valid', 'Looks great');
-    });
-  }
-
   const signupTeamName = document.getElementById('signupTeamName');
   if (signupTeamName) {
+    signupTeamName.addEventListener('focus', () => {
+      renderTeamNameSuggestions(signupTeamName.value || 'Innovators');
+    });
+
     signupTeamName.addEventListener('input', () => {
       const val = normalizeText(signupTeamName.value);
       if (!val) {
         setInputStatus('signupTeamName', 'idle', '');
+        renderTeamNameSuggestions('Innovators');
         return;
       }
       if (val.length < 2) {
         setInputStatus('signupTeamName', 'invalid', 'Team name is too short');
+        renderTeamNameSuggestions(val);
         return;
       }
       if (isTeamNameTaken(val)) {
         setInputStatus('signupTeamName', 'invalid', 'Team name is already taken');
+        renderTeamNameSuggestions(val);
         return;
       }
       setInputStatus('signupTeamName', 'valid', 'Team name is available');
+      const container = document.getElementById('teamNameSuggestions');
+      if (container) container.classList.add('hidden');
     });
   }
 
@@ -1907,17 +2098,34 @@ function bindEvents() {
     });
   }
 
-  // Team Logo Customization Triggers
+  // Team Logo Zoom & Modal Triggers
   const teamLogoUploadInput = document.getElementById('teamLogoUploadInput');
-  const heroTeamLogoUploadBtn = document.getElementById('heroTeamLogoUploadBtn');
-  const changeTeamLogoBtn = document.getElementById('changeTeamLogoBtn');
-  const removeTeamLogoBtn = document.getElementById('removeTeamLogoBtn');
+  const heroTeamLogoWrap = document.getElementById('heroTeamLogoWrap');
+  const heroTeamLogo = document.getElementById('heroTeamLogo');
+  const teamCardLogo = document.getElementById('teamCardLogo');
+  const modalChangeLogoBtn = document.getElementById('modalChangeLogoBtn');
+  const modalRemoveLogoBtn = document.getElementById('modalRemoveLogoBtn');
 
-  if (heroTeamLogoUploadBtn && teamLogoUploadInput) {
-    heroTeamLogoUploadBtn.addEventListener('click', () => teamLogoUploadInput.click());
+  if (heroTeamLogoWrap) {
+    heroTeamLogoWrap.addEventListener('click', openTeamLogoModal);
   }
-  if (changeTeamLogoBtn && teamLogoUploadInput) {
-    changeTeamLogoBtn.addEventListener('click', () => teamLogoUploadInput.click());
+  if (heroTeamLogo) {
+    heroTeamLogo.addEventListener('click', openTeamLogoModal);
+  }
+  if (teamCardLogo) {
+    teamCardLogo.addEventListener('click', openTeamLogoModal);
+  }
+  if (modalChangeLogoBtn && teamLogoUploadInput) {
+    modalChangeLogoBtn.addEventListener('click', () => {
+      closeTeamLogoModal();
+      teamLogoUploadInput.click();
+    });
+  }
+  if (modalRemoveLogoBtn) {
+    modalRemoveLogoBtn.addEventListener('click', () => {
+      removeTeamLogo();
+      closeTeamLogoModal();
+    });
   }
   if (teamLogoUploadInput) {
     teamLogoUploadInput.addEventListener('change', async (event) => {
@@ -1926,9 +2134,6 @@ function bindEvents() {
       await saveTeamLogoFromFile(file);
       teamLogoUploadInput.value = '';
     });
-  }
-  if (removeTeamLogoBtn) {
-    removeTeamLogoBtn.addEventListener('click', removeTeamLogo);
   }
 
   // Chart Type Tabs
@@ -1945,8 +2150,9 @@ function bindEvents() {
     });
   });
 
-  // Live input validation
+  // Live input validation & suggestions
   bindLiveValidationEvents();
+
   document.getElementById('memberName').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -1983,8 +2189,12 @@ function bindEvents() {
   document.querySelectorAll('.auth-tab').forEach((tab) => {
     tab.addEventListener('click', () => toggleAuthTab(tab.dataset.authTab));
   });
+
+  // Password Show / Hide toggling
   document.querySelectorAll('.password-toggle').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const targetId = button.dataset.target;
       const field = document.getElementById(targetId);
       if (!field) {
@@ -1997,15 +2207,20 @@ function bindEvents() {
       button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
     });
   });
+
+  // Modal Closures
   document.querySelectorAll('[data-close="true"]').forEach((element) => {
     element.addEventListener('click', () => {
       if (element.closest('#editModal')) {
         closeEditModal();
       } else if (element.closest('#chatModal')) {
         closeChatModal();
+      } else if (element.closest('#teamLogoModal')) {
+        closeTeamLogoModal();
       }
     });
   });
+
   document.addEventListener('click', (event) => {
     const profileMenu = document.getElementById('profileMenu');
     const profileButton = document.getElementById('profileMenuButton');
@@ -2016,10 +2231,12 @@ function bindEvents() {
       toggleProfileMenu(false);
     }
   });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeEditModal();
       closeChatModal();
+      closeTeamLogoModal();
       toggleProfileMenu(false);
       toggleThemeMenu(false);
     }

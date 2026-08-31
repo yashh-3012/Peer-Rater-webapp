@@ -79,6 +79,10 @@
               <span id="signupUsernameStatus" class="input-status-icon" aria-live="polite"></span>
             </div>
             <p id="signupUsernameMsg" class="input-status-msg"></p>
+            <div id="usernameSuggestions" class="suggestions-box hidden">
+              <span class="suggestions-label">Available suggestions:</span>
+              <div id="usernameSuggestionsList" class="suggestions-list"></div>
+            </div>
           </div>
 
           <div class="field-wrap">
@@ -100,6 +104,10 @@
               <span id="signupTeamNameStatus" class="input-status-icon" aria-live="polite"></span>
             </div>
             <p id="signupTeamNameMsg" class="input-status-msg"></p>
+            <div id="teamNameSuggestions" class="suggestions-box hidden">
+              <span class="suggestions-label">Available suggestions:</span>
+              <div id="teamNameSuggestionsList" class="suggestions-list"></div>
+            </div>
           </div>
 
           <button type="submit" class="primary-button wide-button">Create account</button>
@@ -178,11 +186,8 @@
         <section class="hero-banner">
           <div class="hero-content">
             <div class="hero-team-logo-container">
-              <div class="team-logo-avatar-wrap">
+              <div id="heroTeamLogoWrap" class="team-logo-avatar-wrap clickable-logo" title="Click to view & change team logo">
                 <img id="heroTeamLogo" class="hero-team-logo" src="" alt="Team logo" />
-                <button id="heroTeamLogoUploadBtn" class="team-logo-upload-btn hidden" type="button" title="Upload custom team logo (Leader only)" aria-label="Upload team logo">
-                  📷
-                </button>
               </div>
               <input id="teamLogoUploadInput" type="file" accept="image/*" hidden />
             </div>
@@ -229,15 +234,11 @@
             <div id="teamManagerSection" class="team-manager-box">
               <div class="team-meta-row">
                 <div class="team-identity-inline">
-                  <img id="teamCardLogo" class="team-card-logo" src="" alt="Team logo" />
+                  <img id="teamCardLogo" class="team-card-logo clickable-logo" src="" alt="Team logo" title="Click to view & change team logo" />
                   <div>
                     <span class="helper-label">Active team</span>
                     <strong id="currentTeamName">Demo Team</strong>
                   </div>
-                </div>
-                <div id="teamLeaderActions" class="team-leader-actions hidden">
-                  <button id="changeTeamLogoBtn" class="small-ghost-button" type="button">Logo</button>
-                  <button id="removeTeamLogoBtn" class="small-ghost-button danger hidden" type="button">Reset</button>
                 </div>
               </div>
 
@@ -245,7 +246,6 @@
                 <label class="field-label" for="teamSwitchSelect">Switch team</label>
                 <select id="teamSwitchSelect"></select>
               </div>
-              <div id="profileSummary" class="profile-summary"></div>
               <div id="memberList" class="member-list"></div>
             </div>
 
@@ -398,6 +398,24 @@
               <input id="chatInput" type="text" placeholder="Type a message..." maxlength="500" required />
               <button type="submit" class="primary-button">Send</button>
             </form>
+          </div>
+        </div>
+
+        <div id="teamLogoModal" class="modal hidden" aria-hidden="true">
+          <div class="modal-backdrop" data-close="true"></div>
+          <div class="modal-card team-logo-modal-card" role="dialog" aria-modal="true" aria-labelledby="teamLogoModalTitle">
+            <div class="modal-header">
+              <h3 id="teamLogoModalTitle">Team Logo</h3>
+              <button type="button" class="close-button" data-close="true" aria-label="Close">×</button>
+            </div>
+            <div class="team-logo-preview-box">
+              <img id="teamLogoModalImg" class="team-logo-zoomed-img" src="" alt="Team logo zoom" />
+              <h4 id="teamLogoModalTeamName" class="team-logo-modal-teamname"></h4>
+            </div>
+            <div id="teamLogoModalLeaderControls" class="modal-actions team-logo-modal-actions hidden">
+              <button id="modalChangeLogoBtn" type="button" class="primary-button">Upload New Logo</button>
+              <button id="modalRemoveLogoBtn" type="button" class="secondary-button danger">Reset to Default</button>
+            </div>
           </div>
         </div>
 

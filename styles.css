@@ -1516,12 +1516,19 @@ select:focus {
 @media print {
   body {
     background: white;
+    color: black;
   }
 
   .topbar,
   .hero-banner,
   .controls-panel,
-  .board-panel {
+  .board-panel,
+  .chart-type-tabs,
+  .receipt-actions-box,
+  .section-header,
+  .modal,
+  .theme-switcher-wrap,
+  .profile-menu-wrap {
     display: none !important;
   }
 
@@ -1537,22 +1544,24 @@ select:focus {
   }
 
   .summary-panel {
-    max-width: 420px;
+    max-width: 480px;
     margin: 0 auto;
   }
 
   .print-receipt-meta {
-    display: block;
+    display: block !important;
     margin-bottom: 24px;
   }
 
   .print-receipt-meta h1 {
     margin: 0 0 10px;
     font-size: 1.7rem;
+    color: #0f172a;
   }
 
   .print-receipt-meta p {
     margin: 0 0 16px;
+    color: #334155;
   }
 
   .print-receipt-meta table {
@@ -1570,6 +1579,7 @@ select:focus {
 
   .print-receipt-meta th {
     background: #f1f5f9;
+    font-weight: 700;
   }
 }
 
@@ -1779,21 +1789,50 @@ select:focus {
 
 .input-validated-wrap input {
   width: 100%;
-  padding-right: 40px !important;
+  padding-right: 36px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input-validated-wrap .password-field {
   width: 100%;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .input-validated-wrap .password-field input {
-  padding-right: 88px !important;
+  width: 100%;
+  padding-right: 90px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.password-toggle:hover {
+  background: var(--primary);
+  color: #ffffff;
 }
 
 .input-validated-wrap .password-field .password-toggle {
-  right: 36px;
+  right: 34px;
 }
 
 .input-status-icon {
@@ -1804,10 +1843,10 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   pointer-events: none;
   opacity: 0;
@@ -1871,6 +1910,51 @@ select:focus {
   color: #f87171;
 }
 
+/* Suggestions Box */
+.suggestions-box {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: cardEntrance 0.2s ease-out both;
+}
+
+.suggestions-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion-chip {
+  border: 1px dashed var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suggestion-chip:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
 /* ==========================================================================
    Hero Banner & Team Logo Redesign
    ========================================================================== */
@@ -1913,11 +1997,16 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
 }
 
-.team-logo-avatar-wrap:hover {
-  transform: scale(1.04);
+.clickable-logo {
+  cursor: pointer;
+}
+
+.clickable-logo:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
 }
 
 .hero-team-logo {
@@ -1925,31 +2014,6 @@ select:focus {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.team-logo-upload-btn {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: white;
-  border: 2px solid var(--panel);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease, background 0.2s ease;
-  z-index: 6;
-}
-
-.team-logo-upload-btn:hover {
-  transform: scale(1.15);
-  background: var(--primary-hover);
 }
 
 .hero-text-block {
@@ -1999,10 +2063,17 @@ select:focus {
 
 .hero-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(4, 1fr) !important;
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+@media (max-width: 680px) {
+  .hero-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 .stat-card {
@@ -2054,12 +2125,81 @@ select:focus {
   border: 1px solid var(--border);
   background: var(--primary-soft);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
-.team-leader-actions {
+/* Team Logo Zoom Modal */
+.team-logo-modal-card {
+  width: min(420px, calc(100% - 32px));
+  text-align: center;
+  animation: cardEntrance 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.team-logo-preview-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--panel-alt);
+  border-radius: 16px;
+  margin: 12px 0 16px;
+  border: 1px solid var(--border);
+}
+
+.team-logo-zoomed-img {
+  width: 150px;
+  height: 150px;
+  border-radius: 36px;
+  object-fit: cover;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 4px solid var(--panel);
+  transition: transform 0.3s ease;
+}
+
+.team-logo-zoomed-img:hover {
+  transform: scale(1.05);
+}
+
+.team-logo-modal-teamname {
+  margin-top: 14px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.team-logo-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* Team Leader distinct card & members subhead */
+.team-leader-card {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+}
+
+.team-leader-card .member-role {
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.members-subhead {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 14px 0 8px;
 }
 
 .small-ghost-button {
