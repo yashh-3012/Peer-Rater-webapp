@@ -276,6 +276,15 @@ function getCurrentTeam() {
   return readTeams().find((team) => team.id === activeTeamId) || null;
 }
 
+function isTeamMemberOrLeader(user, team) {
+  if (!user || !team) {
+    return false;
+  }
+  const isLeader = team.leaderId === user.id || (user.role === 'team-leader' && Array.isArray(team.members) && team.members.includes(user.id));
+  const isMember = Array.isArray(team.members) && team.members.includes(user.id);
+  return Boolean(isLeader || isMember);
+}
+
 function getTeamMembers(teamId) {
   const team = readTeams().find((item) => item.id === teamId);
   if (!team) {
@@ -1270,6 +1279,20 @@ function renderApp() {
   document.getElementById('taskForm').classList.toggle('hidden', !isLeader || !team);
   renderTeamSwitcher();
 
+  const chatToggle = document.getElementById('chatToggleButton');
+  const hasChatAccess = Boolean(team && isTeamMemberOrLeader(currentUser, team));
+  if (chatToggle) {
+    if (!hasChatAccess) {
+      chatToggle.disabled = true;
+      chatToggle.title = team ? 'Chat is only accessible to team leaders and members' : 'Join or create a team to access chat';
+      chatToggle.classList.add('disabled-toggle');
+    } else {
+      chatToggle.disabled = false;
+      chatToggle.title = `Team Chat for ${team.name}`;
+      chatToggle.classList.remove('disabled-toggle');
+    }
+  }
+
   if (team) {
     refreshBoardFromTeam(team.id);
   }
@@ -1562,6 +1585,7 @@ function bindEvents() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeEditModal();
+      closeChatModal();
       toggleProfileMenu(false);
       toggleThemeMenu(false);
     }
@@ -1581,14 +1605,36 @@ function escapeHtml(value) {
 const CHAT_MESSAGES_KEY = 'peer-rater-chat-messages';
 
 function getChatMessages(teamId) {
+  if (!teamId) {
+    return [];
+  }
   const allMessages = getJson(CHAT_MESSAGES_KEY, {});
   return allMessages[teamId] || [];
 }
 
 function saveChatMessages(teamId, messages) {
+  if (!teamId) {
+    return;
+  }
   const allMessages = getJson(CHAT_MESSAGES_KEY, {});
   allMessages[teamId] = messages;
   setJson(CHAT_MESSAGES_KEY, allMessages);
+}
+
+function updateChatModalHeader(team, currentUser) {
+  const titleEl = document.getElementById('chatModalTitle');
+  const subtitleEl = document.getElementById('chatModalSubtitle');
+  if (titleEl) {
+    titleEl.textContent = team ? `${team.name} Chat` : 'Team chat';
+  }
+  if (subtitleEl) {
+    if (team && currentUser) {
+      const isLeader = team.leaderId === currentUser.id;
+      subtitleEl.textContent = isLeader ? 'Active as Team Leader • Team only' : 'Active as Team Member • Team only';
+    } else {
+      subtitleEl.textContent = 'Team leader & members only';
+    }
+  }
 }
 
 function sendChatMessage(text) {
@@ -1598,20 +1644,40 @@ function sendChatMessage(text) {
     return;
   }
 
+  // Strict authorization check: Only team leader or members of this team
+  if (!isTeamMemberOrLeader(currentUser, team)) {
+    alert('Access restricted: Only the team leader and members of this team can post messages.');
+    return;
+  }
+
+  const cleanText = normalizeText(text);
+  if (!cleanText) {
+    return;
+  }
+
   const messages = getChatMessages(team.id);
   const senderName = getMemberDisplayName(team.id, currentUser.username);
+  const senderPhoto = getProfilePhoto(currentUser);
+  const isLeader = team.leaderId === currentUser.id;
+
   messages.push({
     id: makeId('msg'),
+    teamId: team.id,
+    senderId: currentUser.id,
     sender: currentUser.username,
     senderName,
-    senderRole: currentUser.role,
-    text: normalizeText(text),
+    senderPhoto,
+    senderRole: isLeader ? 'team-leader' : currentUser.role,
+    text: cleanText,
     timestamp: Date.now()
   });
 
   saveChatMessages(team.id, messages);
   renderChatMessages();
-  document.getElementById('chatInput').value = '';
+  const input = document.getElementById('chatInput');
+  if (input) {
+    input.value = '';
+  }
   const chatMessages = document.getElementById('chatMessages');
   if (chatMessages) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1622,18 +1688,59 @@ function renderChatMessages() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
   const chatMessages = document.getElementById('chatMessages');
-  if (!chatMessages || !currentUser || !team) {
+  if (!chatMessages) {
     return;
   }
 
+  const chatForm = document.getElementById('chatForm');
+  const input = document.getElementById('chatInput');
+  const sendBtn = chatForm ? chatForm.querySelector('button[type="submit"]') : null;
+
+  if (!currentUser || !team || !isTeamMemberOrLeader(currentUser, team)) {
+    chatMessages.innerHTML = `
+      <div class="chat-restricted-state">
+        <p><strong>🔒 Access Restricted</strong></p>
+        <p>This chat is only accessible to the team leader and accepted members of <strong>${escapeHtml(team?.name || 'this team')}</strong>.</p>
+      </div>
+    `;
+    if (input) input.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
+    updateChatModalHeader(team, currentUser);
+    return;
+  }
+
+  if (input) input.disabled = false;
+  if (sendBtn) sendBtn.disabled = false;
+  updateChatModalHeader(team, currentUser);
+
   const messages = getChatMessages(team.id);
+  if (messages.length === 0) {
+    chatMessages.innerHTML = `
+      <div class="chat-empty-state">
+        <span class="chat-empty-icon">💬</span>
+        <p>No messages yet in <strong>${escapeHtml(team.name)}</strong>.</p>
+        <p class="helper-text">Start the discussion with your team!</p>
+      </div>
+    `;
+    return;
+  }
+
   chatMessages.innerHTML = messages.map((msg) => {
-    const isOwnMessage = msg.sender === currentUser.username;
-    const timeStr = new Date(msg.timestamp).toLocaleTimeString();
+    const isOwnMessage = msg.sender === currentUser.username || msg.senderId === currentUser.id;
+    const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const isLeader = msg.senderRole === 'team-leader' || (team.leaderId && team.leaderId === msg.senderId);
+    const roleLabel = isLeader ? 'Leader' : 'Member';
+    const roleBadgeClass = isLeader ? 'leader' : 'member';
+    const senderPhoto = msg.senderPhoto || generateAvatarDataUrl(msg.sender, msg.senderName);
+
     return `
       <div class="chat-message ${isOwnMessage ? 'own-message' : 'other-message'}">
         <div class="message-header">
-          <strong>${escapeHtml(msg.senderName)}</strong>
+          <div class="message-sender">
+            <img class="message-sender-avatar" src="${senderPhoto}" alt="${escapeHtml(msg.senderName)}" />
+            <strong>${escapeHtml(msg.senderName)}</strong>
+            <span class="chat-role-badge ${roleBadgeClass}">${roleLabel}</span>
+          </div>
           <span class="message-time">${timeStr}</span>
         </div>
         <div class="message-text">${escapeHtml(msg.text)}</div>
@@ -1647,12 +1754,29 @@ function renderChatMessages() {
 }
 
 function openChatModal() {
+  const currentUser = getCurrentUser();
+  const team = getCurrentTeam();
   const modal = document.getElementById('chatModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.setAttribute('aria-hidden', 'false');
-    renderChatMessages();
-    document.getElementById('chatInput').focus();
+  if (!modal) {
+    return;
+  }
+
+  if (!currentUser) {
+    alert('Please log in to access team chat.');
+    return;
+  }
+
+  if (!team || !isTeamMemberOrLeader(currentUser, team)) {
+    alert('Access restricted: Chat is only accessible to the team leader and members of this team.');
+    return;
+  }
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  renderChatMessages();
+  const input = document.getElementById('chatInput');
+  if (input && !input.disabled) {
+    input.focus();
   }
 }
 
@@ -1675,7 +1799,7 @@ function bindChatEvents() {
     chatForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const input = document.getElementById('chatInput');
-      if (input.value.trim()) {
+      if (input && input.value.trim()) {
         sendChatMessage(input.value);
       }
     });

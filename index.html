@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerRater | Fair Grade Tracking</title>
     <meta name="description" content="PeerRater helps student teams assign tasks, claim work, and generate a fair contribution receipt for grading." />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -22,7 +23,9 @@
       <div class="bg-particle"></div>
       <div class="auth-card">
         <div class="auth-header">
-          <div class="brand-mark auth-brand-mark">P</div>
+          <div class="brand-mark auth-brand-mark">
+            <img src="logo.svg" alt="PeerRater Logo" class="brand-logo-img" />
+          </div>
           <div>
             <p class="eyebrow">Fair team grading</p>
             <h2>PeerRater</h2>
@@ -84,7 +87,9 @@
       <div class="page-shell">
         <header class="topbar">
           <div class="brand-block">
-            <div class="brand-mark">P</div>
+            <div class="brand-mark">
+              <img src="logo.svg" alt="PeerRater Logo" class="brand-logo-img" />
+            </div>
             <div>
               <p class="eyebrow">Fair team grading</p>
               <h1>PeerRater</h1>
@@ -292,7 +297,10 @@
           <div class="modal-backdrop" data-close="true"></div>
           <div class="modal-card chat-modal" role="dialog" aria-modal="true" aria-labelledby="chatModalTitle">
             <div class="modal-header">
-              <h3 id="chatModalTitle">Team chat</h3>
+              <div class="chat-header-info">
+                <h3 id="chatModalTitle">Team chat</h3>
+                <p id="chatModalSubtitle" class="chat-modal-subtitle">Members only</p>
+              </div>
               <button type="button" class="close-button" data-close="true" aria-label="Close chat">×</button>
             </div>
             <div id="chatMessages" class="chat-messages" aria-live="polite"></div>

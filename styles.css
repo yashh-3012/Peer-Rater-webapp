@@ -729,47 +729,30 @@ select,
   border-radius: 14px;
   display: grid;
   place-items: center;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: white;
-  background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 50%, #3b82f6 100%);
-  box-shadow: var(--shadow-lg);
   position: relative;
-  overflow: hidden;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.brand-mark:hover {
+  transform: translateY(-1px);
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  transition: transform 0.25s ease;
+}
+
+.brand-mark:hover .brand-logo-img {
+  transform: scale(1.04);
 }
 
 .auth-brand-mark {
   width: 64px;
   height: 64px;
-  font-size: 2rem;
-  border-radius: 18px;
-  box-shadow: var(--shadow-xl);
-}
-
-.brand-mark::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  transform: rotate(45deg);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) rotate(45deg);
-  }
 }
 
 .eyebrow {
@@ -1599,6 +1582,19 @@ select:focus {
   flex-direction: column;
 }
 
+.chat-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-modal-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -1609,6 +1605,8 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 280px;
+  max-height: 380px;
 }
 
 .chat-message {
@@ -1630,13 +1628,14 @@ select:focus {
 
 .chat-message.own-message {
   background: var(--primary-soft);
-  margin-left: 20%;
+  margin-left: 15%;
+  border: 1px solid rgba(79, 70, 229, 0.2);
 }
 
 .chat-message.other-message {
   background: var(--panel);
   border: 1px solid var(--border);
-  margin-right: 20%;
+  margin-right: 15%;
 }
 
 .message-header {
@@ -1647,14 +1646,60 @@ select:focus {
   margin-bottom: 4px;
 }
 
+.message-sender {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.message-sender-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .message-header strong {
   font-size: 0.85rem;
   color: var(--text);
 }
 
+.chat-role-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.chat-role-badge.leader {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .chat-role-badge.leader,
+[data-theme="ocean"] .chat-role-badge.leader,
+[data-theme="forest"] .chat-role-badge.leader,
+[data-theme="sunset"] .chat-role-badge.leader {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+}
+
+.chat-role-badge.member {
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(79, 70, 229, 0.25);
+}
+
 .message-time {
   font-size: 0.7rem;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .message-text {
@@ -1662,6 +1707,42 @@ select:focus {
   line-height: 1.4;
   color: var(--text);
   word-wrap: break-word;
+}
+
+.chat-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: auto;
+}
+
+.chat-empty-icon {
+  font-size: 2.2rem;
+  opacity: 0.75;
+}
+
+.chat-restricted-state {
+  text-align: center;
+  padding: 24px 16px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin: auto;
+}
+
+[data-theme="dark"] .chat-restricted-state,
+[data-theme="ocean"] .chat-restricted-state,
+[data-theme="forest"] .chat-restricted-state,
+[data-theme="sunset"] .chat-restricted-state {
+  color: #f87171;
 }
 
 .chat-form {
