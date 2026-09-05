@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  PeerRater - Fair Team Grading Application
+  Main HTML structure for the collaborative task management system
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,22 +10,37 @@
     <title>PeerRater | Fair Grade Tracking</title>
     <meta name="description" content="PeerRater helps student teams assign tasks, claim work, and generate a fair contribution receipt for grading." />
     <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    
+    <!-- Font preconnection for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Google Fonts - Inter for modern typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Application styles -->
     <link rel="stylesheet" href="styles.css" />
+    
+    <!-- External libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Configuration file -->
     <script src="config.js"></script>
   </head>
   <body>
+    <!-- Authentication Screen - Login/Signup -->
     <div id="authScreen" class="auth-screen">
+      <!-- Animated background particles -->
       <div class="bg-particle"></div>
       <div class="bg-particle"></div>
       <div class="bg-particle"></div>
       <div class="bg-particle"></div>
       <div class="bg-particle"></div>
+      
+      <!-- Auth Card Container -->
       <div class="auth-card">
+        <!-- Brand Header with Logo -->
         <div class="auth-header">
           <div class="brand-mark auth-brand-mark">
             <img src="logo.svg" alt="PeerRater Logo" class="brand-logo-img" />
@@ -32,11 +51,13 @@
           </div>
         </div>
 
+        <!-- Login/Signup Tabs -->
         <div class="auth-tabs">
           <button type="button" class="auth-tab active" data-auth-tab="login">Login</button>
           <button type="button" class="auth-tab" data-auth-tab="signup">Sign up</button>
         </div>
 
+        <!-- Login Form -->
         <form id="loginForm" class="auth-form">
           <label class="field-label" for="loginRole">Role</label>
           <select id="loginRole" required>
@@ -56,6 +77,7 @@
           <button type="submit" class="primary-button wide-button">Login</button>
         </form>
 
+        <!-- Signup Form -->
         <form id="signupForm" class="auth-form hidden">
           <label class="field-label" for="signupRole">Role</label>
           <select id="signupRole" required>
@@ -115,9 +137,13 @@
       </div>
     </div>
 
+    <!-- Main Application Shell -->
     <div id="appShell" class="app-shell hidden">
       <div class="page-shell">
+        <!-- Top Navigation Bar -->
+        <!-- Top Navigation Bar -->
         <header class="topbar">
+          <!-- Brand Section -->
           <div class="brand-block">
             <div class="brand-mark">
               <img src="logo.svg" alt="PeerRater Logo" class="brand-logo-img" />
@@ -127,8 +153,13 @@
               <h1>PeerRater</h1>
             </div>
           </div>
+          
+          <!-- Action Buttons -->
           <div class="topbar-actions">
+            <!-- User Role Badge -->
             <div id="teamRoleBadge" class="team-role-badge"></div>
+            
+            <!-- Theme Switcher -->
             <div class="theme-switcher-wrap">
               <button id="themeMenuButton" class="theme-menu-button" type="button" aria-expanded="false" aria-controls="themeMenu" title="Switch theme">
                 🎨
@@ -141,6 +172,8 @@
                 <button type="button" class="theme-menu-item" data-theme="sunset">🌅 Sunset</button>
               </div>
             </div>
+            
+            <!-- Profile Menu -->
             <div class="profile-menu-wrap">
               <button id="profileMenuButton" class="profile-menu-button" type="button" aria-expanded="false" aria-controls="profileMenu">
                 <img id="topbarProfileImage" class="topbar-profile-image" src="" alt="Profile photo" />
@@ -152,12 +185,15 @@
               </div>
               <input id="profileUploadInput" type="file" accept="image/*" capture="environment" hidden />
             </div>
+            
+            <!-- Main Action Buttons -->
             <button id="logoutButton" class="ghost-button">Log out</button>
             <button id="printButton" class="ghost-button">Print receipt</button>
             <button id="chatToggleButton" class="ghost-button">💬 Chat</button>
           </div>
         </header>
 
+        <!-- Edit Task Modal -->
         <div id="editModal" class="modal hidden" aria-hidden="true">
           <div class="modal-backdrop" data-close="true"></div>
           <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
@@ -183,6 +219,7 @@
           </div>
         </div>
 
+        <!-- Hero Banner Section -->
         <section class="hero-banner">
           <div class="hero-content">
             <div class="hero-team-logo-container">
@@ -225,7 +262,9 @@
           </div>
         </section>
 
+        <!-- Main Application Layout -->
         <main class="layout">
+          <!-- Left Panel - Controls and Team Management -->
           <section class="panel controls-panel">
             <div class="section-header">
               <h2>Team Hub</h2>

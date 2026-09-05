@@ -1,16 +1,53 @@
-const ACCOUNTS_KEY = 'peer-rater-accounts';
-const TEAMS_KEY = 'peer-rater-teams';
-const BOARDS_KEY = 'peer-rater-team-boards';
-const CURRENT_USER_KEY = 'peer-rater-current-user';
-const REQUESTS_KEY = 'peer-rater-join-requests';
-const THEME_KEY = 'peer-rater-theme';
+/**
+ * PeerRater - Fair Team Grading Application
+ * A collaborative task management and contribution tracking system for student teams
+ *
+ * Features:
+ * - User authentication (team leaders and members)
+ * - Team creation and management
+ * - Task assignment and point-based contribution tracking
+ * - Join request system with invite/join-request workflows
+ * - Real-time contribution chart visualization
+ * - Team chat functionality
+ * - Theme system with multiple color schemes
+ * - Profile image management
+ * - Printable contribution receipts
+ */
+
+// ============================================================================
+// CONSTANTS AND CONFIGURATION
+// ============================================================================
+
+// LocalStorage keys for data persistence
+const ACCOUNTS_KEY = 'peer-rater-accounts';        // User accounts data
+const TEAMS_KEY = 'peer-rater-teams';              // Team information
+const BOARDS_KEY = 'peer-rater-team-boards';       // Task boards per team
+const CURRENT_USER_KEY = 'peer-rater-current-user'; // Currently logged-in user
+const REQUESTS_KEY = 'peer-rater-join-requests';    // Team join/invite requests
+const THEME_KEY = 'peer-rater-theme';              // User's theme preference
+
+// Default color palette for charts and avatars
 const DEFAULT_COLORS = ['#4f46e5', '#22c55e', '#f97316', '#ec4899', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444'];
 
-let chartInstance = null;
-let taskBeingEditedIndex = null;
-let activeChartType = 'pie';
-let currentTaskFilter = 'all';
+// ============================================================================
+// GLOBAL STATE VARIABLES
+// ============================================================================
 
+let chartInstance = null;           // Chart.js instance for contribution visualization
+let taskBeingEditedIndex = null;     // Index of task currently being edited
+let activeChartType = 'pie';         // Current chart type (pie/bar)
+let currentTaskFilter = 'all';       // Current task filter (all/completed/pending)
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Safely retrieves JSON data from localStorage
+ * @param {string} key - The localStorage key
+ * @param {any} fallback - Default value if key doesn't exist or parsing fails
+ * @returns {any} Parsed JSON data or fallback value
+ */
 function getJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -20,22 +57,48 @@ function getJson(key, fallback) {
   }
 }
 
+/**
+ * Safely stores JSON data in localStorage
+ * @param {string} key - The localStorage key
+ * @param {any} value - The value to store (will be JSON stringified)
+ */
 function setJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+/**
+ * Generates a unique ID with a given prefix
+ * @param {string} prefix - Prefix for the ID (e.g., 'user', 'team', 'task')
+ * @returns {string} Unique ID in format 'prefix_randomString'
+ */
 function makeId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Normalizes text by converting to string and trimming whitespace
+ * @param {any} value - Value to normalize
+ * @returns {string} Normalized string
+ */
 function normalizeText(value) {
   return String(value || '').trim();
 }
 
+/**
+ * Converts text to lowercase slug format
+ * @param {string} value - Text to slugify
+ * @returns {string} Lowercase slug
+ */
 function slugify(value) {
   return normalizeText(value).toLowerCase();
 }
 
+/**
+ * Checks if a team name is already taken
+ * @param {string} teamName - Team name to check
+ * @param {string|null} excludeTeamId - Team ID to exclude from check (for updates)
+ * @returns {boolean} True if team name is taken
+ */
 function isTeamNameTaken(teamName, excludeTeamId = null) {
   const slug = slugify(teamName);
   if (!slug) {
@@ -44,6 +107,12 @@ function isTeamNameTaken(teamName, excludeTeamId = null) {
   return readTeams().some((team) => slugify(team.name) === slug && team.id !== excludeTeamId);
 }
 
+/**
+ * Checks if a username is already taken
+ * @param {string} username - Username to check
+ * @param {string|null} excludeUserId - User ID to exclude from check (for updates)
+ * @returns {boolean} True if username is taken
+ */
 function isUsernameTaken(username, excludeUserId = null) {
   const slug = slugify(username);
   if (!slug) {
@@ -52,6 +121,12 @@ function isUsernameTaken(username, excludeUserId = null) {
   return readAccounts().some((account) => slugify(account.username) === slug && account.id !== excludeUserId);
 }
 
+/**
+ * Sets visual validation status for form input fields
+ * @param {string} fieldId - ID of the input field
+ * @param {string} status - Validation status ('valid', 'invalid', or null)
+ * @param {string} message - Optional status message to display
+ */
 function setInputStatus(fieldId, status, message = '') {
   const icon = document.getElementById(fieldId + 'Status');
   const msg = document.getElementById(fieldId + 'Msg');
@@ -87,14 +162,27 @@ function setInputStatus(fieldId, status, message = '') {
   }
 }
 
+/**
+ * Reads all join/invite requests from localStorage
+ * @returns {Array} Array of request objects
+ */
 function readRequests() {
   return getJson(REQUESTS_KEY, []);
 }
 
+/**
+ * Saves requests array to localStorage
+ * @param {Array} requests - Array of request objects to save
+ */
 function saveRequests(requests) {
   setJson(REQUESTS_KEY, requests);
 }
 
+/**
+ * Formats a date/time value into a readable string
+ * @param {string|Date} value - Date value to format
+ * @returns {string} Formatted date/time string or 'No deadline'
+ */
 function formatDateTime(value) {
   if (!value) {
     return 'No deadline';
@@ -109,6 +197,11 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+/**
+ * Checks if a task was completed after its deadline
+ * @param {Object} task - Task object with claimedAt and deadline properties
+ * @returns {boolean} True if task is late
+ */
 function isTaskLate(task) {
   if (!task || !task.claimedAt || !task.deadline) {
     return false;
@@ -116,6 +209,11 @@ function isTaskLate(task) {
   return new Date(task.claimedAt).getTime() > new Date(task.deadline).getTime();
 }
 
+/**
+ * Calculates effective points for a task (halved if late)
+ * @param {Object} task - Task object with points and deadline info
+ * @returns {number} Effective point value
+ */
 function getTaskEffectivePoints(task) {
   if (!task) {
     return 0;
@@ -124,6 +222,11 @@ function getTaskEffectivePoints(task) {
   return isTaskLate(task) ? base / 2 : base;
 }
 
+/**
+ * Reads a file as a Data URL (base64 encoded)
+ * @param {File} file - File object to read
+ * @returns {Promise<string>} Promise resolving to Data URL string
+ */
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -137,6 +240,12 @@ function readFileAsDataUrl(file) {
   });
 }
 
+/**
+ * Generates an SVG avatar based on username and full name
+ * @param {string} username - User's username
+ * @param {string} fullName - User's full name
+ * @returns {string} Data URL of generated avatar SVG
+ */
 function generateAvatarDataUrl(username, fullName) {
   const initials = (fullName || username || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'P';
   const seed = String(username || fullName || 'peer').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
@@ -153,6 +262,11 @@ function generateAvatarDataUrl(username, fullName) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * Gets profile photo for an account (returns uploaded image or generates avatar)
+ * @param {Object} account - User account object
+ * @returns {string} Profile photo Data URL
+ */
 function getProfilePhoto(account) {
   if (!account) {
     return generateAvatarDataUrl('peer', 'Peer');
@@ -160,6 +274,11 @@ function getProfilePhoto(account) {
   return account.profileImage || generateAvatarDataUrl(account.username, account.fullName || account.username);
 }
 
+/**
+ * Generates an SVG team logo based on team name
+ * @param {string} teamName - Team name
+ * @returns {string} Data URL of generated team logo SVG
+ */
 function generateTeamLogoDataUrl(teamName) {
   const cleanName = String(teamName || 'Team').trim();
   const initials = cleanName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'T';
@@ -188,6 +307,11 @@ function generateTeamLogoDataUrl(teamName) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * Gets team logo (returns uploaded image or generates logo)
+ * @param {Object} team - Team object
+ * @returns {string} Team logo Data URL
+ */
 function getTeamLogo(team) {
   if (!team) {
     return generateTeamLogoDataUrl('Peer Team');
@@ -195,6 +319,67 @@ function getTeamLogo(team) {
   return team.logoImage || generateTeamLogoDataUrl(team.name);
 }
 
+// ============================================================================
+// DATA MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Reads all user accounts from localStorage
+ * @returns {Array} Array of account objects
+ */
+function readAccounts() {
+  return getJson(ACCOUNTS_KEY, []);
+}
+
+/**
+ * Saves accounts array to localStorage
+ * @param {Array} accounts - Array of account objects to save
+ */
+function saveAccounts(accounts) {
+  setJson(ACCOUNTS_KEY, accounts);
+}
+
+/**
+ * Reads all teams from localStorage
+ * @returns {Array} Array of team objects
+ */
+function readTeams() {
+  return getJson(TEAMS_KEY, []);
+}
+
+/**
+ * Saves teams array to localStorage
+ * @param {Array} teams - Array of team objects to save
+ */
+function saveTeams(teams) {
+  setJson(TEAMS_KEY, teams);
+}
+
+/**
+ * Reads task board for a specific team
+ * @param {string} teamId - Team ID
+ * @returns {Array} Array of task objects for the team
+ */
+function readBoard(teamId) {
+  const boards = getJson(BOARDS_KEY, {});
+  return boards[teamId] || [];
+}
+
+/**
+ * Saves task board for a specific team
+ * @param {string} teamId - Team ID
+ * @param {Array} tasks - Array of task objects to save
+ */
+function saveBoard(teamId, tasks) {
+  const boards = getJson(BOARDS_KEY, {});
+  boards[teamId] = tasks;
+  setJson(BOARDS_KEY, boards);
+}
+
+/**
+ * Saves team logo from uploaded file
+ * @param {File} file - Uploaded image file
+ */
 async function saveTeamLogoFromFile(file) {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -224,6 +409,9 @@ async function saveTeamLogoFromFile(file) {
   }
 }
 
+/**
+ * Removes team logo and reverts to default generated logo
+ */
 function removeTeamLogo() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -243,6 +431,9 @@ function removeTeamLogo() {
   }
 }
 
+/**
+ * Opens the team logo modal dialog
+ */
 function openTeamLogoModal() {
   const team = getCurrentTeam();
   const currentUser = getCurrentUser();
@@ -271,6 +462,9 @@ function openTeamLogoModal() {
   modal.setAttribute('aria-hidden', 'false');
 }
 
+/**
+ * Closes the team logo modal dialog
+ */
 function closeTeamLogoModal() {
   const modal = document.getElementById('teamLogoModal');
   if (modal) {
@@ -279,6 +473,11 @@ function closeTeamLogoModal() {
   }
 }
 
+/**
+ * Generates available username suggestions based on a base name
+ * @param {string} baseName - Base name to generate suggestions from
+ * @returns {Array} Array of available username suggestions
+ */
 function generateUsernameSuggestions(baseName) {
   const raw = slugify(baseName || 'peer').replace(/[^a-z0-9_]/g, '');
   const clean = raw.slice(0, 12) || 'peer';
@@ -305,6 +504,10 @@ function generateUsernameSuggestions(baseName) {
   return available;
 }
 
+/**
+ * Renders username suggestions in the UI
+ * @param {string} baseName - Base name to generate suggestions from
+ */
 function renderUsernameSuggestions(baseName) {
   const container = document.getElementById('usernameSuggestions');
   const list = document.getElementById('usernameSuggestionsList');
@@ -335,6 +538,11 @@ function renderUsernameSuggestions(baseName) {
   container.classList.remove('hidden');
 }
 
+/**
+ * Generates available team name suggestions based on a base name
+ * @param {string} baseTeamName - Base team name to generate suggestions from
+ * @returns {Array} Array of available team name suggestions
+ */
 function generateTeamNameSuggestions(baseTeamName) {
   const raw = normalizeText(baseTeamName || 'Innovators');
   const clean = raw.replace(/[^a-zA-Z0-9 ]/g, '').trim().slice(0, 16) || 'Innovators';
@@ -361,6 +569,10 @@ function generateTeamNameSuggestions(baseTeamName) {
   return available;
 }
 
+/**
+ * Renders team name suggestions in the UI
+ * @param {string} baseTeamName - Base team name to generate suggestions from
+ */
 function renderTeamNameSuggestions(baseTeamName) {
   const container = document.getElementById('teamNameSuggestions');
   const list = document.getElementById('teamNameSuggestionsList');
@@ -391,6 +603,10 @@ function renderTeamNameSuggestions(baseTeamName) {
   container.classList.remove('hidden');
 }
 
+/**
+ * Sets the current task filter and updates the UI
+ * @param {string} filter - Filter type ('all', 'available', 'claimed', 'mine')
+ */
 function setTaskFilter(filter) {
   const allowed = ['all', 'available', 'claimed', 'mine'];
   currentTaskFilter = allowed.includes(filter) ? filter : 'all';
@@ -400,6 +616,10 @@ function setTaskFilter(filter) {
   renderTaskList();
 }
 
+/**
+ * Sets the current chart type and updates the visualization
+ * @param {string} type - Chart type ('pie', 'doughnut', 'bar', 'line')
+ */
 function setChartType(type) {
   const allowed = ['pie', 'doughnut', 'bar', 'line'];
   activeChartType = allowed.includes(type) ? type : 'pie';
@@ -409,6 +629,10 @@ function setChartType(type) {
   renderChart();
 }
 
+/**
+ * Ensures seed data exists for first-time users
+ * Creates demo team with leader and member accounts
+ */
 function ensureSeedData() {
   const accounts = getJson(ACCOUNTS_KEY, []);
   if (accounts.length) {
@@ -466,22 +690,42 @@ function ensureSeedData() {
   setJson(REQUESTS_KEY, []);
 }
 
+/**
+ * Reads all user accounts from localStorage
+ * @returns {Array} Array of account objects
+ */
 function readAccounts() {
   return getJson(ACCOUNTS_KEY, []);
 }
 
+/**
+ * Saves accounts array to localStorage
+ * @param {Array} accounts - Array of account objects to save
+ */
 function saveAccounts(accounts) {
   setJson(ACCOUNTS_KEY, accounts);
 }
 
+/**
+ * Reads all teams from localStorage
+ * @returns {Array} Array of team objects
+ */
 function readTeams() {
   return getJson(TEAMS_KEY, []);
 }
 
+/**
+ * Saves teams array to localStorage
+ * @param {Array} teams - Array of team objects to save
+ */
 function saveTeams(teams) {
   setJson(TEAMS_KEY, teams);
 }
 
+/**
+ * Synchronizes team memberships across accounts
+ * Ensures all team members have consistent teamId references
+ */
 function syncTeamMemberships() {
   const accounts = readAccounts();
   const teams = readTeams();
@@ -503,14 +747,27 @@ function syncTeamMemberships() {
   saveTeams(teams);
 }
 
+/**
+ * Reads all task boards from localStorage
+ * @returns {Object} Object mapping team IDs to task boards
+ */
 function readBoards() {
   return getJson(BOARDS_KEY, {});
 }
 
+/**
+ * Saves all task boards to localStorage
+ * @param {Object} boards - Object mapping team IDs to task boards
+ */
 function saveBoards(boards) {
   setJson(BOARDS_KEY, boards);
 }
 
+/**
+ * Gets all team IDs for a user account
+ * @param {Object} account - User account object
+ * @returns {Array} Array of team IDs the user belongs to
+ */
 function getUserTeamIds(account) {
   if (!account) {
     return [];
@@ -524,6 +781,11 @@ function getUserTeamIds(account) {
   return Array.from(new Set(teamIds.filter(Boolean)));
 }
 
+/**
+ * Normalizes user's team state to ensure consistency
+ * @param {Object} account - User account object
+ * @returns {Object|null} Normalized account object
+ */
 function normalizeUserTeamState(account) {
   if (!account) {
     return null;
@@ -535,6 +797,10 @@ function normalizeUserTeamState(account) {
   return normalized;
 }
 
+/**
+ * Gets the currently logged-in user
+ * @returns {Object|null} Current user account object or null
+ */
 function getCurrentUser() {
   const current = getJson(CURRENT_USER_KEY, null);
   if (!current || !current.id) {
@@ -552,6 +818,10 @@ function getCurrentUser() {
   return normalized;
 }
 
+/**
+ * Sets the currently logged-in user
+ * @param {Object} account - User account object to set as current
+ */
 function setCurrentUser(account) {
   if (!account) {
     localStorage.removeItem(CURRENT_USER_KEY);
@@ -564,6 +834,10 @@ function setCurrentUser(account) {
   saveAccounts(accounts);
 }
 
+/**
+ * Gets the current team for the logged-in user
+ * @returns {Object|null} Current team object or null
+ */
 function getCurrentTeam() {
   const user = getCurrentUser();
   if (!user) {
@@ -578,6 +852,12 @@ function getCurrentTeam() {
   return readTeams().find((team) => team.id === activeTeamId) || null;
 }
 
+/**
+ * Checks if a user is a member or leader of a team
+ * @param {Object} user - User account object
+ * @param {Object} team - Team object
+ * @returns {boolean} True if user is member or leader
+ */
 function isTeamMemberOrLeader(user, team) {
   if (!user || !team) {
     return false;
@@ -587,6 +867,11 @@ function isTeamMemberOrLeader(user, team) {
   return Boolean(isLeader || isMember);
 }
 
+/**
+ * Gets all members of a team
+ * @param {string} teamId - Team ID
+ * @returns {Array} Array of member account objects
+ */
 function getTeamMembers(teamId) {
   const team = readTeams().find((item) => item.id === teamId);
   if (!team) {
@@ -597,10 +882,21 @@ function getTeamMembers(teamId) {
   return team.members.map((memberId) => accounts.find((account) => account.id === memberId)).filter(Boolean);
 }
 
+/**
+ * Gets usernames of all team members
+ * @param {string} teamId - Team ID
+ * @returns {Array} Array of member usernames
+ */
 function getTeamMemberNames(teamId) {
   return getTeamMembers(teamId).map((member) => member.username);
 }
 
+/**
+ * Gets display name for a team member
+ * @param {string} teamId - Team ID
+ * @param {string} username - Member username
+ * @returns {string} Display name (full name or username)
+ */
 function getMemberDisplayName(teamId, username) {
   if (!username) {
     return 'Unassigned';
@@ -610,6 +906,11 @@ function getMemberDisplayName(teamId, username) {
   return member?.fullName || member?.username || username;
 }
 
+/**
+ * Gets or creates the task board for a team
+ * @param {string} teamId - Team ID
+ * @returns {Object} Team board object with tasks and members
+ */
 function getTeamBoard(teamId) {
   const boards = readBoards();
   if (!boards[teamId]) {
@@ -624,12 +925,21 @@ function getTeamBoard(teamId) {
   return boards[teamId];
 }
 
+/**
+ * Saves the task board for a team
+ * @param {string} teamId - Team ID
+ * @param {Object} board - Board object to save
+ */
 function saveTeamBoard(teamId, board) {
   const boards = readBoards();
   boards[teamId] = board;
   saveBoards(boards);
 }
 
+/**
+ * Refreshes board membership from current team members
+ * @param {string} teamId - Team ID
+ */
 function refreshBoardFromTeam(teamId) {
   syncTeamMemberships();
   const board = getTeamBoard(teamId);
@@ -641,20 +951,35 @@ function refreshBoardFromTeam(teamId) {
   saveTeamBoard(teamId, board);
 }
 
+/**
+ * Gets human-readable label for user role
+ * @param {string} role - User role ('team-leader' or 'team-member')
+ * @returns {string} Human-readable role label
+ */
 function getRoleLabel(role) {
   return role === 'team-leader' ? 'Team Leader' : 'Team Member';
 }
 
+/**
+ * Shows the authentication screen and hides the app
+ */
 function showAuthScreen() {
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('appShell').classList.add('hidden');
 }
 
+/**
+ * Shows the app screen and hides authentication
+ */
 function showAppScreen() {
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('appShell').classList.remove('hidden');
 }
 
+/**
+ * Toggles between login and signup tabs
+ * @param {string} tabName - Tab to show ('login' or 'signup')
+ */
 function toggleAuthTab(tabName) {
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -670,6 +995,10 @@ function toggleAuthTab(tabName) {
   syncSignupRoleFields();
 }
 
+/**
+ * Syncs signup form fields based on selected role
+ * Shows/hides team name field for team leaders
+ */
 function syncSignupRoleFields() {
   const roleSelect = document.getElementById('signupRole');
   const teamNameField = document.getElementById('signupTeamName');
@@ -688,6 +1017,10 @@ function syncSignupRoleFields() {
   }
 }
 
+/**
+ * Handles user login form submission
+ * @param {Event} event - Form submit event
+ */
 function handleLogin(event) {
   event.preventDefault();
   const role = document.getElementById('loginRole').value;
@@ -707,6 +1040,10 @@ function handleLogin(event) {
   renderApp();
 }
 
+/**
+ * Handles user signup form submission
+ * @param {Event} event - Form submit event
+ */
 async function handleSignup(event) {
   event.preventDefault();
 
@@ -810,6 +1147,9 @@ function handleLogout() {
   renderApp();
 }
 
+/**
+ * Creates a new team for the current team leader
+ */
 function createNewTeam() {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.role !== 'team-leader') {
@@ -862,6 +1202,10 @@ function createNewTeam() {
   renderApp();
 }
 
+/**
+ * Adds a member to the current team (sent by team leader)
+ * Creates an invite request for the member
+ */
 function addMemberFromLeader() {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.role !== 'team-leader') {
@@ -920,6 +1264,10 @@ function addMemberFromLeader() {
   renderApp();
 }
 
+/**
+ * Removes a member from the current team
+ * @param {string} memberId - ID of member to remove
+ */
 function removeTeamMember(memberId) {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.role !== 'team-leader') {
@@ -1105,6 +1453,10 @@ function searchTeams() {
   });
 }
 
+/**
+ * Renders the join request lists for both leaders and members
+ * Shows pending invites and join requests
+ */
 function renderJoinRequestLists() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -1182,6 +1534,9 @@ function renderJoinRequestLists() {
   }
 }
 
+/**
+ * Renders team search results for members to join
+ */
 function renderMemberSearchResults() {
   const currentUser = getCurrentUser();
   const memberRequestList = document.getElementById('memberRequestList');
@@ -1191,6 +1546,9 @@ function renderMemberSearchResults() {
   searchTeams();
 }
 
+/**
+ * Renders the current user's profile summary
+ */
 function renderProfileSummary() {
   const currentUser = getCurrentUser();
   const profileSummary = document.getElementById('profileSummary');
@@ -1262,6 +1620,9 @@ async function saveProfileImageFromFile(file) {
   renderApp();
 }
 
+/**
+ * Removes the current user's profile image
+ */
 function removeProfileImage() {
   const currentUser = getCurrentUser();
   if (!currentUser) {
@@ -1278,6 +1639,9 @@ function removeProfileImage() {
   renderApp();
 }
 
+/**
+ * Renders the list of team members in the UI
+ */
 function renderTeamMembers() {
   const memberList = document.getElementById('memberList');
   const currentUser = getCurrentUser();
@@ -1348,6 +1712,9 @@ function renderTeamMembers() {
   });
 }
 
+/**
+ * Renders the assignee dropdown options for task creation
+ */
 function renderTaskAssigneeOptions() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -1364,6 +1731,10 @@ function renderTaskAssigneeOptions() {
   taskAssignee.innerHTML = options.join('');
 }
 
+/**
+ * Renders the task list for the current team
+ * Displays all tasks with their status and actions
+ */
 function renderTaskList() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -1479,6 +1850,10 @@ function renderTaskList() {
   });
 }
 
+/**
+ * Renders the contribution chart using Chart.js
+ * Shows team member contribution distribution
+ */
 function renderChart() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
@@ -1573,6 +1948,11 @@ function renderChart() {
   renderPrintReceipt(team, teamMembers, totals);
 }
 
+/**
+ * Renders the chart legend with member colors and totals
+ * @param {Array} labels - Chart labels (member names)
+ * @param {Array} series - Chart data series
+ */
 function renderLegend(labels, series) {
   const legend = document.getElementById('legend');
   const total = series.reduce((sum, value) => sum + Number(value), 0) || 1;
@@ -1593,6 +1973,12 @@ function renderLegend(labels, series) {
   }).join('');
 }
 
+/**
+ * Renders the printable receipt data
+ * @param {Object} team - Team object
+ * @param {Array} teamMembers - Array of team members
+ * @param {Object} totals - Contribution totals by member
+ */
 function renderPrintReceipt(team, teamMembers, totals) {
   const receipt = document.getElementById('printReceiptMeta');
   if (!receipt) {
@@ -1636,6 +2022,11 @@ function renderPrintReceipt(team, teamMembers, totals) {
   `;
 }
 
+/**
+ * Renders hero section statistics
+ * @param {Object} team - Team object
+ * @param {Object} currentUser - Current user object
+ */
 function renderHeroStats(team, currentUser) {
   const logoEl = document.getElementById('heroTeamLogo');
   const cardLogoEl = document.getElementById('teamCardLogo');
@@ -1674,6 +2065,9 @@ function renderHeroStats(team, currentUser) {
   if (membersEl) membersEl.textContent = String(membersCount);
 }
 
+/**
+ * Renders the team switcher dropdown for multi-team users
+ */
 function renderTeamSwitcher() {
   const currentUser = getCurrentUser();
   const teamSwitchSelect = document.getElementById('teamSwitchSelect');
@@ -1697,6 +2091,10 @@ function renderTeamSwitcher() {
   teamSwitchSelect.value = activeTeamId;
 }
 
+/**
+ * Main render function - updates the entire application UI
+ * Called after any state change to refresh the interface
+ */
 function renderApp() {
   const currentUser = getCurrentUser();
   if (!currentUser) {
@@ -1773,6 +2171,10 @@ function claimTask(taskIndex) {
   renderApp();
 }
 
+/**
+ * Removes a task from the current team board
+ * @param {number} taskIndex - Index of task to remove
+ */
 function removeTask(taskIndex) {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.role !== 'team-leader') {
@@ -2335,6 +2737,10 @@ function sendChatMessage(text) {
   }
 }
 
+/**
+ * Renders chat messages in the chat modal
+ * Displays conversation history for the current team
+ */
 function renderChatMessages() {
   const currentUser = getCurrentUser();
   const team = getCurrentTeam();
