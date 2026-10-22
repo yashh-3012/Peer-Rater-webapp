@@ -1,36 +1,38 @@
-# Peer Rater
+# PeerRater
 
-A web app where peers can rate each other and chat, built with vanilla JavaScript and Supabase.
+**Fair grade tracking for group projects.** PeerRater turns team work into transparent contribution data: every task has points, an owner and a deadline, so everyone can see who did what.
 
 ## Features
 
-- Rate peers and see scores
-- Built-in chat
-- Cloud database powered by Supabase
-- Ready to deploy on Netlify or Vercel
+- **Accounts and roles:** sign up as a Team Leader or a Team Member
+- **Teams:** leaders create teams, add or remove members and manage join requests; members can search for teams and request to join
+- **Task board:** add tasks with points (1–100), an assignee and an optional deadline; tasks can be claimed, edited and removed
+- **Late penalty:** a task claimed after its deadline earns only half its points
+- **Analytics:** contribution breakdown as pie, doughnut, bar or line charts (Chart.js)
+- **Print receipt:** print a contribution summary with the chart
+- **Team chat:** built-in chat for each team
+- **Customisation:** profile photos, team logos and 6 themes (Light, Sunset, Ocean, Dark, Forest and more)
 
 ## Tech Stack
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | HTML, CSS, JavaScript |
-| Backend / Database | Supabase (PostgreSQL) |
-| Hosting | Netlify / Vercel |
+- HTML, CSS and vanilla JavaScript
+- [Chart.js](https://www.chartjs.org/) for charts
+- Browser `localStorage` for data
+- Netlify / Vercel for hosting
 
 ## Project Structure
 
 ```
 Peer-Rater-webapp/
-├── index.html           # Main page
+├── index.html           # App layout
 ├── app.js               # App logic
-├── config.js            # Supabase configuration
-├── styles.css           # Styling
-├── logo.svg             # App logo
-├── scores.json          # Score data
-├── supabase-schema.sql  # Database schema
-├── package.json         # Project metadata and scripts
-├── netlify.toml         # Netlify deployment config
-└── vercel.json          # Vercel deployment config
+├── styles.css           # Styling and themes
+├── config.js            # App configuration
+├── logo.svg             # Logo
+├── supabase-schema.sql  # Optional Supabase table (for cloud storage)
+├── package.json         # Scripts
+├── netlify.toml         # Netlify config
+└── vercel.json          # Vercel config
 ```
 
 ## Getting Started
@@ -38,54 +40,36 @@ Peer-Rater-webapp/
 ### Prerequisites
 
 - A modern web browser
-- [Node.js](https://nodejs.org/) (optional, for running a local server)
-- A free [Supabase](https://supabase.com/) account
+- Python 3 (used by the local server script)
 
-### 1. Clone the repository
+### Run locally
 
 ```bash
 git clone https://github.com/yashh-3012/Peer-Rater-webapp.git
 cd Peer-Rater-webapp
+npm start
 ```
 
-### 2. Set up Supabase
+Then open `http://localhost:3000` in your browser.
 
-1. Create a new project on Supabase.
-2. Open the **SQL Editor** and run the contents of `supabase-schema.sql` to create the tables.
-3. Go to **Project Settings → API** and copy your **Project URL** and **anon public key**.
+You can also just open `index.html` directly.
 
-### 3. Configure the app
+## How It Works
 
-Open `config.js` and add your Supabase credentials:
+1. A team leader signs up and creates a team.
+2. Members sign up and request to join (or get invited by the leader).
+3. The leader adds tasks to the board with points and deadlines.
+4. Members claim tasks. Late tasks get half points.
+5. The analytics section shows each member's contribution, and the receipt can be printed.
 
-```js
-const SUPABASE_URL = "your-project-url";
-const SUPABASE_ANON_KEY = "your-anon-public-key";
-```
-
-> Never commit secret keys. Only the public anon key belongs in frontend code.
-
-### 4. Run locally
-
-```bash
-npx serve .
-```
-
-Then open the address shown in the terminal (usually `http://localhost:3000`).
-You can also open `index.html` directly in your browser.
+> **Note:** data is stored in your browser's `localStorage`, so it stays on your device and is not shared between users.
 
 ## Deployment
 
-The project includes config files for both platforms:
-
-- **Netlify:** connect the repo on Netlify; settings are read from `netlify.toml`.
-- **Vercel:** import the repo on Vercel; settings are read from `vercel.json`.
-
-## Future Improvements
-
-- User authentication
-- Rating history and analytics
-- Notifications for new ratings and messages
+```bash
+npm run deploy:netlify
+npm run deploy:vercel
+```
 
 ## Author
 
