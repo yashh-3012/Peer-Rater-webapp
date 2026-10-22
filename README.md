@@ -18,7 +18,7 @@
 - HTML, CSS and vanilla JavaScript
 - [Chart.js](https://www.chartjs.org/) for charts
 - Browser `localStorage` for data
-- Netlify / Vercel for hosting
+- Vercel for hosting
 
 ## Project Structure
 
@@ -31,7 +31,6 @@ Peer-Rater-webapp/
 ├── logo.svg             # Logo
 ├── supabase-schema.sql  # Optional Supabase table (for cloud storage)
 ├── package.json         # Scripts
-├── netlify.toml         # Netlify config
 └── vercel.json          # Vercel config
 ```
 
@@ -67,7 +66,6 @@ You can also just open `index.html` directly.
 ## Deployment
 
 ```bash
-npm run deploy:netlify
 npm run deploy:vercel
 ```
 
